@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Circle background -->
+    <path
+        android:fillColor="#F5F7FA"
+        android:pathData="M12,12m-10,0a10,10 0,1 1,20 0a10,10 0,1 1,-20 0"/>
+    <!-- Graph bars -->
+    <path
+        android:fillColor="#A2CEE3"
+        android:pathData="M6,16L6,13C6,12.45 6.45,12 7,12L9,12C9.55,12 10,12.45 10,13L10,16C10,16.55 9.55,17 9,17L7,17C6.45,17 6,16.55 6,16Z"/>
+    <path
+        android:fillColor="#A2CEE3"
+        android:pathData="M10.5,16L10.5,10C10.5,9.45 10.95,9 11.5,9L13.5,9C14.05,9 14.5,9.45 14.5,10L14.5,16C14.5,16.55 14.05,17 13.5,17L11.5,17C10.95,17 10.5,16.55 10.5,16Z"/>
+    <path
+        android:fillColor="#A2CEE3"
+        android:pathData="M15,16L15,7C15,6.45 15.45,6 16,6L18,6C18.55,6 19,6.45 19,7L19,16C19,16.55 18.55,17 18,17L16,17C15.45,17 15,16.55 15,16Z"/>
+</vector> 
