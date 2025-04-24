@@ -1,0 +1,30 @@
+{
+    "families": {
+        "family_1": {
+            "parent": {
+                "name": "John Doe",
+                "email": "parent@example.com",
+                "children": ["alice"]
+            },
+            "children": {
+                "alice": {
+                    "name": "Alice Doe",
+                    "pin": "1234",
+                    "points": 100,
+                    "completed_chores": [
+                        {
+                            "name": "Clean Room",
+                            "points": 20,
+                            "completed_date": "2024-03-15"
+                        },
+                        {
+                            "name": "Do Homework",
+                            "points": 30,
+                            "completed_date": "2024-03-16"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+} 
