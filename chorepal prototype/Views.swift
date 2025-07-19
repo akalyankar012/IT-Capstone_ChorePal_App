@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var selectedTab = 1  // Default to tasks tab
     @AppStorage("selectedTheme") private var selectedTheme: Theme = .light
     @StateObject private var achievementManager = AchievementManager()
+    @StateObject private var authService = AuthService()
     @State private var chores = Chore.sampleChores
     
     var body: some View {
@@ -26,8 +27,11 @@ struct ContentView: View {
                 Color(.systemBackground)
                     .ignoresSafeArea()
                 
-                if selectedRole == .none {
-                    RoleSelectionView(selectedRole: $selectedRole, selectedTheme: $selectedTheme)
+                // Authentication Flow
+                if authService.authState != .authenticated {
+                    authenticationView
+                } else if selectedRole == .none {
+                    RoleSelectionView(selectedRole: $selectedRole, selectedTheme: $selectedTheme, authService: authService)
                 } else {
                     TabView(selection: $selectedTab) {
                         NavigationView {
@@ -41,7 +45,7 @@ struct ContentView: View {
                         .tag(1)
                         
                         NavigationView {
-                            SettingsView(role: selectedRole, selectedTheme: $selectedTheme, selectedRole: $selectedRole, selectedTab: $selectedTab)
+                            SettingsView(role: selectedRole, selectedTheme: $selectedTheme, selectedRole: $selectedRole, selectedTab: $selectedTab, authService: authService)
                         }
                         .tag(2)
                     }
@@ -86,12 +90,36 @@ struct ContentView: View {
         }
         .preferredColorScheme(selectedTheme == .light ? .light : .dark)
     }
+    
+    @ViewBuilder
+    private var authenticationView: some View {
+        if selectedRole == .child && authService.authState == .none {
+            // Show child login directly
+            ChildLoginView(authService: authService)
+        } else {
+            switch authService.authState {
+            case .none:
+                // Show role selection first, then auth
+                RoleSelectionView(selectedRole: $selectedRole, selectedTheme: $selectedTheme, authService: authService)
+            case .signUp:
+                ParentSignUpView(authService: authService)
+            case .verifyPhone:
+                PhoneVerificationView(authService: authService)
+            case .signIn:
+                ParentSignInView(authService: authService)
+            case .authenticated:
+                // This should not happen here, but just in case
+                RoleSelectionView(selectedRole: $selectedRole, selectedTheme: $selectedTheme, authService: authService)
+            }
+        }
+    }
 }
 
 // MARK: - Role Selection View
 struct RoleSelectionView: View {
     @Binding var selectedRole: UserRole
     @Binding var selectedTheme: Theme
+    @ObservedObject var authService: AuthService
     @State private var isAnimating = false
     
     private let themeColor = Color(hex: "#a2cee3")
@@ -144,6 +172,7 @@ struct RoleSelectionView: View {
                 Button(action: {
                     withAnimation {
                         selectedRole = .parent
+                        authService.authState = .signUp
                     }
                 }) {
                     HStack {
@@ -160,9 +189,29 @@ struct RoleSelectionView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
                 
+                // Sign In option for parents
+                HStack {
+                    Text("Already have an account?")
+                        .foregroundColor(.gray)
+                        .font(.caption)
+                    
+                    Button("Sign In") {
+                        withAnimation {
+                            selectedRole = .parent
+                            authService.authState = .signIn
+                        }
+                    }
+                    .foregroundColor(themeColor)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                }
+                .padding(.top, 8)
+                
                 Button(action: {
                     withAnimation {
                         selectedRole = .child
+                        // For child, go directly to PIN login
+                        authService.authState = .none // Reset to show child login
                     }
                 }) {
                     HStack {
@@ -541,6 +590,7 @@ struct SettingsView: View {
     @Binding var selectedTheme: Theme
     @Binding var selectedRole: UserRole
     @Binding var selectedTab: Int
+    @ObservedObject var authService: AuthService
     @State private var isAnimating = false
     
     var body: some View {
@@ -573,6 +623,21 @@ struct SettingsView: View {
                         Image(systemName: "arrow.left.circle.fill")
                             .foregroundColor(.red)
                         Text("Change Role")
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+            
+            Section {
+                Button(action: {
+                    authService.signOut()
+                    selectedRole = .none
+                    selectedTab = 1
+                }) {
+                    HStack {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .foregroundColor(.red)
+                        Text("Sign Out")
                             .foregroundColor(.red)
                     }
                 }
@@ -1165,8 +1230,12 @@ struct ContentView_Previews: PreviewProvider {
             ContentView()
                 .previewDisplayName("Full App")
             
-            RoleSelectionView(selectedRole: .constant(.none), selectedTheme: .constant(.light))
-                .previewDisplayName("Role Selection")
+            RoleSelectionView(
+                selectedRole: .constant(.none), 
+                selectedTheme: .constant(.light),
+                authService: AuthService()
+            )
+            .previewDisplayName("Role Selection")
             
             HomeView(
                 role: .child,

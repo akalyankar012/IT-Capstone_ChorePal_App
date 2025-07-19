@@ -1,22 +1,6 @@
 import Foundation
 
-// Models for our database entities
-struct Parent: Codable {
-    var id: String
-    var email: String
-    var password: String
-    var name: String
-    var children: [String]
-}
-
-struct Child: Codable {
-    var id: String
-    var name: String
-    var pin: String
-    var points: Int
-    var parentId: String
-}
-
+// Database structure for our mock data
 struct Database: Codable {
     var parents: [Parent]
     var children: [Child]
@@ -33,20 +17,18 @@ class DatabaseService {
     
     private func loadSampleData() {
         // This is just for demonstration purposes
+        let parentId = UUID()
+        let childId = UUID()
+        
         let sampleData = Database(
             parents: [
-                Parent(id: "p1", 
-                      email: "parent@example.com",
-                      password: "demo123",
-                      name: "John Doe",
-                      children: ["c1"])
+                Parent(phoneNumber: "5551234567", 
+                      password: "demo123")
             ],
             children: [
-                Child(id: "c1",
-                     name: "Alice Doe",
+                Child(name: "Alice Doe",
                      pin: "1234",
-                     points: 100,
-                     parentId: "p1")
+                     parentId: parentId)
             ]
         )
         self.database = sampleData
@@ -58,7 +40,7 @@ class DatabaseService {
     }
     
     // Helper method to update points
-    func updatePoints(for childId: String, newPoints: Int) {
+    func updatePoints(for childId: UUID, newPoints: Int) {
         guard var db = database else { return }
         if let index = db.children.firstIndex(where: { $0.id == childId }) {
             db.children[index].points = newPoints
@@ -67,17 +49,17 @@ class DatabaseService {
     }
     
     // MARK: - Parent Authentication
-    func authenticateParent(email: String, password: String) -> Parent? {
-        return database?.parents.first { $0.email == email && $0.password == password }
+    func authenticateParent(phoneNumber: String, password: String) -> Parent? {
+        return database?.parents.first { $0.phoneNumber == phoneNumber && $0.password == password }
     }
     
     // MARK: - Get Children for Parent
-    func getChildren(forParentId parentId: String) -> [Child] {
+    func getChildren(forParentId parentId: UUID) -> [Child] {
         return database?.children.filter { $0.parentId == parentId } ?? []
     }
     
     // MARK: - Update Child Points
-    func updateChildPoints(childId: String, newPoints: Int) -> Bool {
+    func updateChildPoints(childId: UUID, newPoints: Int) -> Bool {
         guard var db = database else { return false }
         
         if let index = db.children.firstIndex(where: { $0.id == childId }) {
@@ -89,7 +71,7 @@ class DatabaseService {
     }
     
     // MARK: - Child Authentication
-    func authenticateChild(id: String, pin: String) -> Child? {
-        return database?.children.first { $0.id == id && $0.pin == pin }
+    func authenticateChild(pin: String) -> Child? {
+        return database?.children.first { $0.pin == pin }
     }
 } 

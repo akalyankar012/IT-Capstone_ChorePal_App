@@ -6,6 +6,34 @@ enum UserRole {
     case none
 }
 
+// MARK: - Authentication Models
+struct Parent: Identifiable, Codable {
+    let id = UUID()
+    var phoneNumber: String
+    var password: String
+    var isVerified: Bool = false
+    var children: [Child] = []
+    var createdAt: Date = Date()
+}
+
+struct Child: Identifiable, Codable {
+    let id = UUID()
+    var name: String
+    var pin: String
+    var parentId: UUID
+    var points: Int = 0
+    var createdAt: Date = Date()
+}
+
+enum AuthState {
+    case none
+    case signUp
+    case verifyPhone
+    case signIn
+    case authenticated
+}
+
+// MARK: - Existing Models
 struct Chore: Identifiable {
     let id = UUID()
     var title: String
