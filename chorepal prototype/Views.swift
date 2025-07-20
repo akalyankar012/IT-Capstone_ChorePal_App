@@ -168,7 +168,7 @@ struct RoleSelectionView: View {
             }
             .padding(.bottom, 40)
             
-            VStack(spacing: 16) {
+            VStack(spacing: 20) {
                 Button(action: {
                     withAnimation {
                         selectedRole = .parent
@@ -188,24 +188,6 @@ struct RoleSelectionView: View {
                     .cornerRadius(16)
                 }
                 .buttonStyle(PlainButtonStyle())
-                
-                // Sign In option for parents
-                HStack {
-                    Text("Already have an account?")
-                        .foregroundColor(.gray)
-                        .font(.caption)
-                    
-                    Button("Sign In") {
-                        withAnimation {
-                            selectedRole = .parent
-                            authService.authState = .signIn
-                        }
-                    }
-                    .foregroundColor(themeColor)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                }
-                .padding(.top, 8)
                 
                 Button(action: {
                     withAnimation {
@@ -227,6 +209,24 @@ struct RoleSelectionView: View {
                     .cornerRadius(16)
                 }
                 .buttonStyle(PlainButtonStyle())
+                
+                // Sign In option for parents - moved below both buttons
+                HStack {
+                    Text("Already have an account?")
+                        .foregroundColor(.gray)
+                        .font(.caption)
+                    
+                    Button("Sign In") {
+                        withAnimation {
+                            selectedRole = .parent
+                            authService.authState = .signIn
+                        }
+                    }
+                    .foregroundColor(themeColor)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                }
+                .padding(.top, 8)
             }
             .padding(.horizontal, 40)
             
