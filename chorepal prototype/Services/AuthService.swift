@@ -299,11 +299,17 @@ class AuthService: ObservableObject {
             return
         }
         
+        // Get the current Firebase user to get the correct parent document ID
+        guard let currentUser = auth.currentUser else {
+            print("Error: No Firebase user found when saving child")
+            return
+        }
+        
         do {
             let childData: [String: Any] = [
                 "name": child.name,
                 "pin": child.pin,
-                "parentId": parent.id.uuidString,
+                "parentId": currentUser.uid, // Use Firebase Auth UID instead of UUID
                 "points": child.points,
                 "createdAt": FieldValue.serverTimestamp()
             ]
@@ -313,7 +319,7 @@ class AuthService: ObservableObject {
             print("Child saved to Firestore successfully: \(child.name)")
             
             // Update parent document to include child reference
-            try await db.collection("parents").document(parent.id.uuidString).updateData([
+            try await db.collection("parents").document(currentUser.uid).updateData([
                 "children": FieldValue.arrayUnion([child.id.uuidString])
             ])
             print("Parent updated with child reference")
@@ -406,6 +412,9 @@ class AuthService: ObservableObject {
             currentParent?.children.append(newChild)
             isLoading = false
         }
+        
+        // Save child to Firestore
+        await saveChildToFirestore(newChild)
         
         return pin
     }
