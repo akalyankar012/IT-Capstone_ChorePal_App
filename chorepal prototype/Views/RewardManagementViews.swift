@@ -295,9 +295,7 @@ struct AddRewardView: View {
                         Spacer()
                         HStack(spacing: 16) {
                             Button(action: {
-                                let newValue = max(1, pointsValue - 5)
-                                pointsValue = newValue
-                                pointsText = "\(newValue)"
+                                updatePoints(max(1, pointsValue - 5))
                             }) {
                                 Image(systemName: "minus.circle.fill")
                                     .font(.title2)
@@ -318,9 +316,7 @@ struct AddRewardView: View {
                                 }
                             
                             Button(action: {
-                                let newValue = min(1000, pointsValue + 5)
-                                pointsValue = newValue
-                                pointsText = "\(newValue)"
+                                updatePoints(min(1000, pointsValue + 5))
                             }) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title2)
