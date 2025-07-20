@@ -253,6 +253,11 @@ struct AddRewardView: View {
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
     
+    private func updatePoints(_ newValue: Int) {
+        pointsValue = newValue
+        pointsText = "\(newValue)"
+    }
+    
     private let themeColor = Color(hex: "#a2cee3")
     
     var body: some View {
@@ -287,15 +292,16 @@ struct AddRewardView: View {
                         Text("Points Required")
                         Spacer()
                         HStack(spacing: 16) {
-                            Button(action: { 
-                                if pointsValue > 1 { 
-                                    pointsValue -= 5 
-                                    pointsText = "\(pointsValue)"
-                                }
+                            Button(action: {
+                                let newValue = max(1, pointsValue - 5)
+                                pointsValue = newValue
+                                pointsText = "\(newValue)"
                             }) {
                                 Image(systemName: "minus.circle.fill")
+                                    .font(.title2)
                                     .foregroundColor(themeColor)
                             }
+                            .buttonStyle(PlainButtonStyle())
                             
                             TextField("Points", text: $pointsText)
                                 .keyboardType(.numberPad)
@@ -309,15 +315,16 @@ struct AddRewardView: View {
                                     }
                                 }
                             
-                            Button(action: { 
-                                if pointsValue < 1000 { 
-                                    pointsValue += 5 
-                                    pointsText = "\(pointsValue)"
-                                }
+                            Button(action: {
+                                let newValue = min(1000, pointsValue + 5)
+                                pointsValue = newValue
+                                pointsText = "\(newValue)"
                             }) {
                                 Image(systemName: "plus.circle.fill")
+                                    .font(.title2)
                                     .foregroundColor(themeColor)
                             }
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                     
@@ -437,6 +444,11 @@ struct EditRewardView: View {
     
     private let themeColor = Color(hex: "#a2cee3")
     
+    private func updatePoints(_ newValue: Int) {
+        pointsValue = newValue
+        pointsText = "\(newValue)"
+    }
+    
     init(reward: Reward, rewardService: RewardService) {
         self.reward = reward
         self.rewardService = rewardService
@@ -473,15 +485,16 @@ struct EditRewardView: View {
                         Text("Points Required")
                         Spacer()
                         HStack(spacing: 16) {
-                            Button(action: { 
-                                if pointsValue > 1 { 
-                                    pointsValue -= 5 
-                                    pointsText = "\(pointsValue)"
-                                }
+                            Button(action: {
+                                let newValue = max(1, pointsValue - 5)
+                                pointsValue = newValue
+                                pointsText = "\(newValue)"
                             }) {
                                 Image(systemName: "minus.circle.fill")
+                                    .font(.title2)
                                     .foregroundColor(themeColor)
                             }
+                            .buttonStyle(PlainButtonStyle())
                             
                             TextField("Points", text: $pointsText)
                                 .keyboardType(.numberPad)
@@ -495,15 +508,16 @@ struct EditRewardView: View {
                                     }
                                 }
                             
-                            Button(action: { 
-                                if pointsValue < 1000 { 
-                                    pointsValue += 5 
-                                    pointsText = "\(pointsValue)"
-                                }
+                            Button(action: {
+                                let newValue = min(1000, pointsValue + 5)
+                                pointsValue = newValue
+                                pointsText = "\(newValue)"
                             }) {
                                 Image(systemName: "plus.circle.fill")
+                                    .font(.title2)
                                     .foregroundColor(themeColor)
                             }
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                     
