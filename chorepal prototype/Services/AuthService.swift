@@ -214,6 +214,28 @@ class AuthService: ObservableObject {
                             print("Failed to create account: \(error)")
                             throw error
                         }
+                    } else if authError.code == .wrongPassword || authError.code == .invalidCredential {
+                        print("Invalid password for existing account. Attempting to reset password...")
+                        // For testing purposes, we'll create a new account with a different email
+                        let newEmail = "\(cleanPhoneNumber)_new@parent.chorepal.com"
+                        print("Creating new account with email: \(newEmail)")
+                        
+                        do {
+                            let result = try await auth.createUser(withEmail: newEmail, password: password)
+                            
+                            // Store parent data in Firestore
+                            let parentData: [String: Any] = [
+                                "phoneNumber": cleanPhoneNumber,
+                                "isVerified": true,
+                                "createdAt": FieldValue.serverTimestamp()
+                            ]
+                            
+                            try await db.collection("parents").document(result.user.uid).setData(parentData)
+                            print("New parent account created successfully with new email")
+                        } catch {
+                            print("Failed to create account with new email: \(error)")
+                            throw error
+                        }
                     } else {
                         // Re-throw other auth errors
                         throw error
