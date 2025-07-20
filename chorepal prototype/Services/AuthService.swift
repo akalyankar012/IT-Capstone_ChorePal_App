@@ -787,8 +787,19 @@ class AuthService: ObservableObject {
         }
         
         if let name = data["name"] as? String,
-           let parentIdString = data["parentId"] as? String,
-           let parentId = UUID(uuidString: parentIdString) {
+           let parentIdString = data["parentId"] as? String {
+            
+            // The parentId in Firestore is stored as a Firebase Auth UID (string), not a UUID
+            // We need to handle this differently
+            let parentId: UUID
+            if let uuid = UUID(uuidString: parentIdString) {
+                parentId = uuid
+            } else {
+                // If it's not a valid UUID, create a new UUID for the parent
+                // This is a fallback for when parentId is a Firebase Auth UID
+                parentId = UUID()
+                print("⚠️ ParentId is not a valid UUID, using generated UUID: \(parentId)")
+            }
             
             let childId = UUID(uuidString: document.documentID) ?? UUID()
             var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
