@@ -702,52 +702,96 @@ class AuthService: ObservableObject {
     private func loadChildData(userId: String) {
         print("🔍 Loading child data for Firebase Auth UID: \(userId)")
         
-        // We need to find the child by searching for the Firebase Auth UID in the children collection
-        // The Firebase Auth UID should be stored in the child document
+        // First, try to find the child by searching for the Firebase Auth UID in the children collection
         db.collection("children")
             .whereField("firebaseAuthUid", isEqualTo: userId)
             .getDocuments { [weak self] snapshot, error in
                 DispatchQueue.main.async {
                     if let error = error {
-                        print("❌ Error loading child data: \(error)")
-                        // Fallback to mock data
-                        self?.createMockChild(userId: userId)
+                        print("❌ Error searching for child with firebaseAuthUid: \(error)")
+                        // Try alternative search method
+                        self?.searchChildByEmail(userId: userId)
                         return
                     }
                     
                     guard let documents = snapshot?.documents, !documents.isEmpty else {
                         print("❌ No child found with Firebase Auth UID: \(userId)")
-                        // Fallback to mock data
-                        self?.createMockChild(userId: userId)
+                        // Try alternative search method
+                        self?.searchChildByEmail(userId: userId)
                         return
                     }
                     
                     // Get the first (and should be only) child document
                     let document = documents[0]
-                    let data = document.data()
-                    
-                    if let name = data["name"] as? String,
-                       let pin = data["pin"] as? String,
-                       let parentIdString = data["parentId"] as? String,
-                       let parentId = UUID(uuidString: parentIdString) {
-                        
-                        let childId = UUID(uuidString: document.documentID) ?? UUID()
-                        var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
-                        child.points = data["points"] as? Int ?? 0
-                        
-                        print("✅ Child data loaded successfully: \(name) with PIN: \(pin)")
-                        print("🔧 Setting currentChild and authState to .authenticated")
-                        self?.currentChild = child
-                        self?.authState = .authenticated
-                        print("🔧 Auth state updated: \(String(describing: self?.authState))")
-                        print("🔧 Current child set: \(self?.currentChild?.name ?? "nil")")
-                    } else {
-                        print("❌ Invalid child data structure")
-                        // Fallback to mock data
-                        self?.createMockChild(userId: userId)
-                    }
+                    self?.loadChildFromDocument(document)
                 }
             }
+    }
+    
+    private func searchChildByEmail(userId: String) {
+        print("🔍 Trying alternative search method for child with UID: \(userId)")
+        
+        // Extract the child ID from the Firebase Auth UID (which should be the child's UUID)
+        // The Firebase Auth email format is: {childId}@child.chorepal.com
+        // So we can try to find the child document using the child ID
+        
+        // Get all children and find the one that matches
+        db.collection("children").getDocuments { [weak self] snapshot, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("❌ Error getting all children: \(error)")
+                    self?.createMockChild(userId: userId)
+                    return
+                }
+                
+                guard let documents = snapshot?.documents else {
+                    print("❌ No children found in database")
+                    self?.createMockChild(userId: userId)
+                    return
+                }
+                
+                // Find the child document that might match this Firebase Auth UID
+                for document in documents {
+                    let data = document.data()
+                    let documentId = document.documentID
+                    
+                    // Check if this document ID matches the Firebase Auth UID pattern
+                    // or if the firebaseAuthUid field matches
+                    if documentId == userId || data["firebaseAuthUid"] as? String == userId {
+                        print("✅ Found matching child document: \(documentId)")
+                        self?.loadChildFromDocument(document)
+                        return
+                    }
+                }
+                
+                print("❌ No matching child found, creating mock child")
+                self?.createMockChild(userId: userId)
+            }
+        }
+    }
+    
+    private func loadChildFromDocument(_ document: DocumentSnapshot) {
+        let data = document.data() ?? [:]
+        
+        if let name = data["name"] as? String,
+           let pin = data["pin"] as? String,
+           let parentIdString = data["parentId"] as? String,
+           let parentId = UUID(uuidString: parentIdString) {
+            
+            let childId = UUID(uuidString: document.documentID) ?? UUID()
+            var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
+            child.points = data["points"] as? Int ?? 0
+            
+            print("✅ Child data loaded successfully: \(name) with PIN: \(pin)")
+            print("🔧 Setting currentChild and authState to .authenticated")
+            currentChild = child
+            authState = .authenticated
+            print("🔧 Auth state updated: \(String(describing: authState))")
+            print("🔧 Current child set: \(currentChild?.name ?? "nil")")
+        } else {
+            print("❌ Invalid child data structure")
+            createMockChild(userId: document.documentID)
+        }
     }
     
     private func createMockChild(userId: String) {
