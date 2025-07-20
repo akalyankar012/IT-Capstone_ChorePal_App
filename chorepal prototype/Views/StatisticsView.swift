@@ -87,7 +87,9 @@ struct TimeRangeSelector: View {
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(selectedRange == range ? .white : .secondary)
-                        .padding(.horizontal, 16)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
                         .background(
@@ -209,6 +211,13 @@ struct StatisticsCard: View {
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                            .background(Color(.systemBackground))
+                    )
                 
                 Text(title)
                     .font(.caption)
@@ -281,6 +290,13 @@ struct ChorePerformanceChart: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.green)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                                    .background(Color(.systemBackground))
+                            )
                         Text("Completed")
                             .font(.caption)
                             .foregroundColor(.gray)
@@ -291,6 +307,13 @@ struct ChorePerformanceChart: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(themeColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                                    .background(Color(.systemBackground))
+                            )
                         Text("Total Points")
                             .font(.caption)
                             .foregroundColor(.gray)
@@ -301,6 +324,13 @@ struct ChorePerformanceChart: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.yellow)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                                    .background(Color(.systemBackground))
+                            )
                         Text("Earned")
                             .font(.caption)
                             .foregroundColor(.gray)
@@ -351,6 +381,13 @@ struct ChartBar: View {
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                            .background(Color(.systemBackground))
+                    )
             }
         }
     }
