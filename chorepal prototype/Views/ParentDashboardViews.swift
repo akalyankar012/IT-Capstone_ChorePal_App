@@ -51,7 +51,7 @@ struct ParentDashboardView: View {
             AddChildView(authService: authService)
         }
         .fullScreenCover(item: $selectedChild) { child in
-            ChildDetailsView(child: child, authService: authService)
+                            ChildDetailsView(child: child, authService: authService, choreService: choreService)
         }
     }
 }
@@ -529,6 +529,7 @@ struct AddChildView: View {
 struct ChildDetailsView: View {
     let child: Child
     @ObservedObject var authService: AuthService
+    @ObservedObject var choreService: ChoreService
     @Environment(\.dismiss) private var dismiss
     @State private var showingDeleteAlert = false
     
@@ -575,7 +576,7 @@ struct ChildDetailsView: View {
                         
                         StatCard(
                             title: "Active Chores",
-                            value: "0", // Will be implemented with chore management
+                            value: "\(activeChoresCount)",
                             icon: "checklist",
                             color: .green
                         )
@@ -671,5 +672,9 @@ struct ChildDetailsView: View {
     private func removeChild() {
         authService.removeChild(child)
         dismiss()
+    }
+    
+    private var activeChoresCount: Int {
+        return choreService.getChoresForChild(child.id).filter { !$0.isCompleted }.count
     }
 } 
