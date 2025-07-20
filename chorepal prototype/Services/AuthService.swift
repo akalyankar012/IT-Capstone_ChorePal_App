@@ -513,17 +513,13 @@ class AuthService: ObservableObject {
                             let result = try await auth.createUser(withEmail: childEmail, password: childPassword)
                             print("✅ Firebase Auth account created successfully")
                             
-                            // Store child data in Firestore (update existing document)
-                            let childData: [String: Any] = [
-                                "name": child.name,
-                                "pin": child.pin,
-                                "parentId": parentIdString,
-                                "points": child.points,
-                                "createdAt": FieldValue.serverTimestamp()
+                            // Update the existing child document with the Firebase Auth UID
+                            let childUpdateData: [String: Any] = [
+                                "firebaseAuthUid": result.user.uid
                             ]
                             
-                            try await db.collection("children").document(result.user.uid).setData(childData)
-                            print("✅ Child data updated in Firestore with new Firebase UID")
+                            try await db.collection("children").document(child.id.uuidString).updateData(childUpdateData)
+                            print("✅ Child data updated in Firestore with new Firebase UID: \(result.user.uid)")
                             
                             // Firebase auth state listener will handle the rest
                             await MainActor.run {
@@ -704,33 +700,51 @@ class AuthService: ObservableObject {
     }
     
     private func loadChildData(userId: String) {
-        // Load child data from Firestore
-        db.collection("children").document(userId).getDocument { [weak self] document, error in
-            DispatchQueue.main.async {
-                if let document = document, document.exists {
-                    // Child data exists, load it from Firestore
-                    if let data = document.data(),
-                       let name = data["name"] as? String,
+        print("🔍 Loading child data for Firebase Auth UID: \(userId)")
+        
+        // We need to find the child by searching for the Firebase Auth UID in the children collection
+        // The Firebase Auth UID should be stored in the child document
+        db.collection("children")
+            .whereField("firebaseAuthUid", isEqualTo: userId)
+            .getDocuments { [weak self] snapshot, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("❌ Error loading child data: \(error)")
+                        // Fallback to mock data
+                        self?.createMockChild(userId: userId)
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents, !documents.isEmpty else {
+                        print("❌ No child found with Firebase Auth UID: \(userId)")
+                        // Fallback to mock data
+                        self?.createMockChild(userId: userId)
+                        return
+                    }
+                    
+                    // Get the first (and should be only) child document
+                    let document = documents[0]
+                    let data = document.data()
+                    
+                    if let name = data["name"] as? String,
                        let pin = data["pin"] as? String,
                        let parentIdString = data["parentId"] as? String,
                        let parentId = UUID(uuidString: parentIdString) {
                         
-                        let childId = UUID(uuidString: userId) ?? UUID()
+                        let childId = UUID(uuidString: document.documentID) ?? UUID()
                         var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
                         child.points = data["points"] as? Int ?? 0
                         
+                        print("✅ Child data loaded successfully: \(name) with PIN: \(pin)")
                         self?.currentChild = child
                         self?.authState = .authenticated
                     } else {
+                        print("❌ Invalid child data structure")
                         // Fallback to mock data
                         self?.createMockChild(userId: userId)
                     }
-                } else {
-                    // New child, create profile with mock data for now
-                    self?.createMockChild(userId: userId)
                 }
             }
-        }
     }
     
     private func createMockChild(userId: String) {
