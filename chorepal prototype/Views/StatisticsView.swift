@@ -80,24 +80,24 @@ struct TimeRangeSelector: View {
     @Binding var selectedRange: TimeRange
     
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 2) {
             ForEach(TimeRange.allCases, id: \.self) { range in
                 Button(action: { selectedRange = range }) {
                     Text(range.title)
                         .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(selectedRange == range ? .white : .primary)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
+                        .fontWeight(.semibold)
+                        .foregroundColor(selectedRange == range ? .white : .secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
-                        .background(selectedRange == range ? Color(hex: "#a2cee3") : Color(.systemGray6))
-                        .cornerRadius(0)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(selectedRange == range ? Color(hex: "#a2cee3") : Color(.systemGray5))
+                        )
                 }
                 .buttonStyle(PlainButtonStyle())
             }
         }
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
         .padding(.horizontal, 20)
     }
 }
@@ -111,7 +111,7 @@ struct FamilyOverviewStats: View {
     private let themeColor = Color(hex: "#a2cee3")
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             HStack(alignment: .center) {
                 Image(systemName: "chart.bar.fill")
                     .font(.title2)
@@ -119,7 +119,7 @@ struct FamilyOverviewStats: View {
                     .frame(width: 24, height: 24)
                 Text("Family Overview")
                     .font(.title3)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
                 Spacer()
             }
             
@@ -160,10 +160,12 @@ struct FamilyOverviewStats: View {
                 )
             }
         }
-        .padding(20)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        )
     }
     
     private var completionRate: Int {
@@ -182,12 +184,13 @@ struct StatisticsCard: View {
     let trend: TrendDirection?
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
+            // Icon and trend row
             HStack(alignment: .center) {
                 Image(systemName: icon)
                     .font(.title2)
                     .foregroundColor(color)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 28, height: 28)
                 
                 Spacer()
                 
@@ -199,23 +202,30 @@ struct StatisticsCard: View {
                 }
             }
             
-            VStack(spacing: 4) {
+            // Value and title
+            VStack(spacing: 6) {
                 Text(value)
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 
                 Text(title)
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
+                    .lineLimit(2)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        )
     }
 }
 
@@ -227,7 +237,7 @@ struct ChorePerformanceChart: View {
     private let themeColor = Color(hex: "#a2cee3")
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             HStack(alignment: .center) {
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .font(.title2)
@@ -235,7 +245,7 @@ struct ChorePerformanceChart: View {
                     .frame(width: 24, height: 24)
                 Text("Chore Performance")
                     .font(.title3)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
                 Spacer()
             }
             
@@ -298,10 +308,12 @@ struct ChorePerformanceChart: View {
                 }
             }
         }
-        .padding(20)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        )
     }
 }
 
@@ -317,26 +329,29 @@ struct ChartBar: View {
     }
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             ZStack(alignment: .bottom) {
-                Rectangle()
-                    .fill(Color(.systemGray5))
-                    .frame(width: 40, height: 100)
-                    .cornerRadius(8)
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+                    .frame(width: 44, height: 120)
                 
-                Rectangle()
+                RoundedRectangle(cornerRadius: 12)
                     .fill(color)
-                    .frame(width: 40, height: max(4, 100 * percentage))
-                    .cornerRadius(8)
+                    .frame(width: 44, height: max(8, 120 * percentage))
+                    .animation(.easeInOut(duration: 0.3), value: percentage)
             }
             
-            Text(label)
-                .font(.caption2)
-                .foregroundColor(.gray)
-            
-            Text("\(value)")
-                .font(.caption)
-                .fontWeight(.semibold)
+            VStack(spacing: 4) {
+                Text(label)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                
+                Text("\(value)")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+            }
         }
     }
 }
@@ -350,7 +365,7 @@ struct ChildPerformanceComparison: View {
     private let themeColor = Color(hex: "#a2cee3")
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             HStack(alignment: .center) {
                 Image(systemName: "person.3.fill")
                     .font(.title2)
@@ -358,7 +373,7 @@ struct ChildPerformanceComparison: View {
                     .frame(width: 24, height: 24)
                 Text("Child Performance")
                     .font(.title3)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
                 Spacer()
             }
             
@@ -379,10 +394,12 @@ struct ChildPerformanceComparison: View {
                     .padding()
             }
         }
-        .padding(20)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        )
     }
 }
 
@@ -396,42 +413,44 @@ struct ChildPerformanceRow: View {
     
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 // Child Avatar
                 Circle()
-                    .fill(themeColor.opacity(0.2))
-                    .frame(width: 40, height: 40)
+                    .fill(themeColor.opacity(0.15))
+                    .frame(width: 48, height: 48)
                     .overlay(
                         Text(String(child.name.prefix(1)).uppercased())
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                            .font(.title2)
+                            .fontWeight(.bold)
                             .foregroundColor(themeColor)
                     )
                 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(child.name)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.primary)
                     
-                    HStack(spacing: 16) {
-                        HStack(spacing: 4) {
+                    HStack(spacing: 20) {
+                        HStack(spacing: 6) {
                             Image(systemName: "star.fill")
                                 .font(.caption)
                                 .foregroundColor(.yellow)
-                                .frame(width: 12, height: 12)
+                                .frame(width: 14, height: 14)
                             Text("\(child.points) pts")
                                 .font(.caption)
-                                .foregroundColor(.gray)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
                         }
                         
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.caption)
                                 .foregroundColor(.green)
-                                .frame(width: 12, height: 12)
+                                .frame(width: 14, height: 14)
                             Text("\(completedChores) completed")
                                 .font(.caption)
-                                .foregroundColor(.gray)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
                         }
                     }
                 }
@@ -442,7 +461,12 @@ struct ChildPerformanceRow: View {
                     .font(.caption)
                     .foregroundColor(.gray)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+            )
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -460,7 +484,7 @@ struct RewardStatistics: View {
     private let themeColor = Color(hex: "#a2cee3")
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             HStack(alignment: .center) {
                 Image(systemName: "gift.fill")
                     .font(.title2)
@@ -468,7 +492,7 @@ struct RewardStatistics: View {
                     .frame(width: 24, height: 24)
                 Text("Reward Statistics")
                     .font(.title3)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
                 Spacer()
             }
             
@@ -509,10 +533,12 @@ struct RewardStatistics: View {
                 )
             }
         }
-        .padding(20)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        )
     }
     
     private var averageRewardCost: Int {
@@ -529,7 +555,7 @@ struct RecentActivitySection: View {
     private let themeColor = Color(hex: "#a2cee3")
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             HStack(alignment: .center) {
                 Image(systemName: "clock.fill")
                     .font(.title2)
@@ -537,7 +563,7 @@ struct RecentActivitySection: View {
                     .frame(width: 24, height: 24)
                 Text("Recent Activity")
                     .font(.title3)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
                 Spacer()
             }
             
@@ -547,10 +573,12 @@ struct RecentActivitySection: View {
                 }
             }
         }
-        .padding(20)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        )
     }
     
     private var recentActivities: [ActivityItem] {
