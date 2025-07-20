@@ -291,9 +291,12 @@ struct AddRewardView: View {
                                     .foregroundColor(themeColor)
                             }
                             
-                            Text("\(pointsValue)")
+                            TextField("Points", value: $pointsValue, format: .number)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.center)
                                 .font(.headline)
-                                .frame(minWidth: 40)
+                                .frame(width: 60)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
                             
                             Button(action: { if pointsValue < 1000 { pointsValue += 5 } }) {
                                 Image(systemName: "plus.circle.fill")
@@ -301,6 +304,10 @@ struct AddRewardView: View {
                             }
                         }
                     }
+                    
+                    Text("Points range: 1-1000")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     
                     Toggle("Available for Purchase", isOn: $isAvailable)
                 }
@@ -453,9 +460,12 @@ struct EditRewardView: View {
                                     .foregroundColor(themeColor)
                             }
                             
-                            Text("\(pointsValue)")
+                            TextField("Points", value: $pointsValue, format: .number)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.center)
                                 .font(.headline)
-                                .frame(minWidth: 40)
+                                .frame(width: 60)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
                             
                             Button(action: { if pointsValue < 1000 { pointsValue += 5 } }) {
                                 Image(systemName: "plus.circle.fill")
@@ -463,6 +473,10 @@ struct EditRewardView: View {
                             }
                         }
                     }
+                    
+                    Text("Points range: 1-1000")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     
                     Toggle("Available for Purchase", isOn: $isAvailable)
                 }
