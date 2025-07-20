@@ -214,10 +214,12 @@ class AuthService: ObservableObject {
                             print("Failed to create account: \(error)")
                             throw error
                         }
-                    } else if authError.code == .wrongPassword || authError.code == .invalidCredential {
-                        print("Invalid password for existing account. Attempting to reset password...")
-                        // For testing purposes, we'll create a new account with a different email
-                        let newEmail = "\(cleanPhoneNumber)_new@parent.chorepal.com"
+                    } else if authError.code.rawValue == 17004 || authError.code == .wrongPassword || authError.code == .invalidCredential {
+                        print("Invalid password for existing account. Creating new account...")
+                        
+                        // Create a new account with a different email to avoid conflicts
+                        let timestamp = Int(Date().timeIntervalSince1970)
+                        let newEmail = "\(cleanPhoneNumber)_\(timestamp)@parent.chorepal.com"
                         print("Creating new account with email: \(newEmail)")
                         
                         do {

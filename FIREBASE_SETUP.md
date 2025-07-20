@@ -44,8 +44,9 @@
 1. In Firebase Console, go to "Authentication"
 2. Click "Get started"
 3. Go to "Sign-in method" tab
-4. Enable "Phone" provider
-5. Add test phone numbers if needed
+4. **Enable "Email/Password" provider** (this is required for our app)
+5. Optionally enable "Phone" provider for future features
+6. Add test phone numbers if using phone authentication
 
 ## Step 6: Create Firestore Database
 
@@ -84,8 +85,9 @@ service cloud.firestore {
    - Check that `FirebaseApp.configure()` is called in `App.swift`
 
 2. **Authentication errors**
-   - Verify phone authentication is enabled in Firebase Console
+   - Verify **Email/Password authentication** is enabled in Firebase Console
    - Check that test phone numbers are added (for development)
+   - If you get "malformed credential" error, ensure Email/Password is enabled
 
 3. **Build errors**
    - Clean build folder (Cmd+Shift+K)
