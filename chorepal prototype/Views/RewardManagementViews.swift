@@ -254,8 +254,10 @@ struct AddRewardView: View {
     @State private var errorMessage = ""
     
     private func updatePoints(_ newValue: Int) {
-        pointsValue = newValue
-        pointsText = "\(newValue)"
+        DispatchQueue.main.async {
+            pointsValue = newValue
+            pointsText = "\(newValue)"
+        }
     }
     
     private let themeColor = Color(hex: "#a2cee3")
@@ -445,8 +447,10 @@ struct EditRewardView: View {
     private let themeColor = Color(hex: "#a2cee3")
     
     private func updatePoints(_ newValue: Int) {
-        pointsValue = newValue
-        pointsText = "\(newValue)"
+        DispatchQueue.main.async {
+            pointsValue = newValue
+            pointsText = "\(newValue)"
+        }
     }
     
     init(reward: Reward, rewardService: RewardService) {
