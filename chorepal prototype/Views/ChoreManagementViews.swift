@@ -496,6 +496,11 @@ struct AddChoreView: View {
     @State private var isRequired = false
     @State private var selectedChildId: UUID?
     @State private var showingChildSelection = false
+    @State private var showingTemplates = false
+    @State private var isAddingChore = false
+    @State private var showingSuccessAlert = false
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -622,27 +627,57 @@ struct AddChoreView: View {
                     .foregroundColor(.blue)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        let newChore = Chore(
-                            title: title,
-                            description: description,
-                            points: pointsValue,
-                            dueDate: dueDate,
-                            isCompleted: false,
-                            isRequired: isRequired,
-                            assignedToChildId: selectedChildId,
-                            createdAt: Date()
-                        )
-                        choreService.addChore(newChore)
-                        dismiss()
+                    Button(isAddingChore ? "Adding..." : "Add") {
+                        addChore()
                     }
-                    .disabled(title.isEmpty || description.isEmpty)
+                    .disabled(title.isEmpty || description.isEmpty || isAddingChore)
                 }
             }
         }
         .presentationBackground(.background)
         .sheet(isPresented: $showingChildSelection) {
             ChildSelectionView(selectedChildId: $selectedChildId, authService: authService)
+        }
+        .sheet(isPresented: $showingTemplates) {
+            ChoreTemplatesView(title: $title, description: $description, pointsValue: $pointsValue, isRequired: $isRequired)
+        }
+        .alert("Success!", isPresented: $showingSuccessAlert) {
+            Button("OK") { dismiss() }
+        } message: {
+            Text("Chore added successfully!")
+        }
+        .alert("Error", isPresented: $showingErrorAlert) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
+        }
+    }
+    
+    private func addChore() {
+        guard !title.isEmpty && !description.isEmpty else {
+            errorMessage = "Please fill in all required fields"
+            showingErrorAlert = true
+            return
+        }
+        
+        isAddingChore = true
+        
+        // Simulate network delay for better UX
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            let newChore = Chore(
+                title: title,
+                description: description,
+                points: pointsValue,
+                dueDate: dueDate,
+                isCompleted: false,
+                isRequired: isRequired,
+                assignedToChildId: selectedChildId,
+                createdAt: Date()
+            )
+            
+            choreService.addChore(newChore)
+            isAddingChore = false
+            showingSuccessAlert = true
         }
     }
 }
@@ -928,4 +963,100 @@ struct EditChoreView: View {
             ChildSelectionView(selectedChildId: $selectedChildId, authService: authService)
         }
     }
+}
+
+// MARK: - Chore Templates View
+struct ChoreTemplatesView: View {
+    @Binding var title: String
+    @Binding var description: String
+    @Binding var pointsValue: Int
+    @Binding var isRequired: Bool
+    @Environment(\.dismiss) private var dismiss
+    
+    private let themeColor = Color(hex: "#a2cee3")
+    
+    private let templates = [
+        ChoreTemplate(name: "Make Bed", description: "Make your bed neatly", points: 3, required: true),
+        ChoreTemplate(name: "Clean Room", description: "Pick up toys and organize room", points: 5, required: true),
+        ChoreTemplate(name: "Do Dishes", description: "Wash and put away dishes", points: 4, required: false),
+        ChoreTemplate(name: "Take Out Trash", description: "Empty trash bins", points: 2, required: false),
+        ChoreTemplate(name: "Feed Pet", description: "Feed and water the pet", points: 3, required: true),
+        ChoreTemplate(name: "Homework", description: "Complete homework assignments", points: 8, required: true),
+        ChoreTemplate(name: "Laundry", description: "Sort and fold laundry", points: 6, required: false),
+        ChoreTemplate(name: "Set Table", description: "Set the table for meals", points: 2, required: false)
+    ]
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                Text("Chore Templates")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .padding(.top, 20)
+                
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(templates) { template in
+                            Button(action: {
+                                title = template.name
+                                description = template.description
+                                pointsValue = template.points
+                                isRequired = template.required
+                                dismiss()
+                            }) {
+                                HStack(spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(template.name)
+                                            .font(.system(size: 17, weight: .semibold))
+                                            .foregroundColor(.primary)
+                                        
+                                        Text(template.description)
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                            .multilineTextAlignment(.leading)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    VStack(alignment: .trailing, spacing: 4) {
+                                        Text("\(template.points) pts")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(themeColor)
+                                        
+                                        if template.required {
+                                            Text("Required")
+                                                .font(.caption2)
+                                                .foregroundColor(.orange)
+                                        }
+                                    }
+                                }
+                                .padding(12)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct ChoreTemplate: Identifiable {
+    let id = UUID()
+    let name: String
+    let description: String
+    let points: Int
+    let required: Bool
 } 
