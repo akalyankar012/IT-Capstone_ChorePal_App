@@ -761,6 +761,7 @@ struct ChildDetailsView: View {
 struct ParentOverviewView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var choreService: ChoreService
+    @StateObject private var rewardService = RewardService()
     @Binding var showingAddChild: Bool
     @Binding var selectedChild: Child?
     @Binding var showingChildDetails: Bool
@@ -784,6 +785,9 @@ struct ParentOverviewView: View {
                 // Quick Actions Section
                 if authService.currentParent != nil {
                     QuickActionsSection(choreService: choreService, authService: authService)
+                    
+                    // Redeemed Rewards Section
+                    RedeemedRewardsSection(rewardService: rewardService, authService: authService)
                 } else {
                     // Show loading or error state
                     VStack(spacing: 16) {
@@ -812,6 +816,124 @@ struct ParentOverviewView: View {
             .padding(.horizontal, 20)
         }
         .background(Color(.systemGroupedBackground))
+    }
+}
+
+// MARK: - Redeemed Rewards Section
+struct RedeemedRewardsSection: View {
+    @ObservedObject var rewardService: RewardService
+    @ObservedObject var authService: AuthService
+    
+    private let themeColor = Color(hex: "#a2cee3")
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "gift.fill")
+                    .font(.title2)
+                    .foregroundColor(themeColor)
+                Text("Redeemed Rewards")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            
+            if redeemedRewards.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "gift")
+                        .font(.system(size: 40))
+                        .foregroundColor(.gray)
+                    
+                    Text("No rewards redeemed yet")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
+                .padding(.vertical, 20)
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(redeemedRewards) { reward in
+                        RedeemedRewardRow(reward: reward, authService: authService)
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+    }
+    
+    private var redeemedRewards: [Reward] {
+        let childrenIds = authService.currentParent?.children.map { $0.id } ?? []
+        return rewardService.getPurchasedRewards().filter { reward in
+            if let purchasedByChildId = reward.purchasedByChildId {
+                return childrenIds.contains(purchasedByChildId)
+            }
+            return false
+        }
+    }
+}
+
+// MARK: - Redeemed Reward Row
+struct RedeemedRewardRow: View {
+    let reward: Reward
+    @ObservedObject var authService: AuthService
+    
+    private let themeColor = Color(hex: "#a2cee3")
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            // Reward Icon
+            Circle()
+                .fill(Color(hex: reward.category.color).opacity(0.2))
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Image(systemName: reward.category.icon)
+                        .font(.title3)
+                        .foregroundColor(Color(hex: reward.category.color))
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(reward.name)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
+                
+                if let purchasedAt = reward.purchasedAt {
+                    Text("Redeemed \(purchasedAt.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                
+                if let childName = childName {
+                    Text("by \(childName)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            // Points Spent
+            HStack(spacing: 4) {
+                Image(systemName: "star.fill")
+                    .font(.caption)
+                    .foregroundColor(.yellow)
+                Text("-\(reward.points)")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.red)
+            }
+        }
+        .padding(12)
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+    
+    private var childName: String? {
+        if let purchasedByChildId = reward.purchasedByChildId {
+            return authService.currentParent?.children.first { $0.id == purchasedByChildId }?.name
+        }
+        return nil
     }
 }
 

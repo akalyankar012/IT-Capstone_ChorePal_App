@@ -467,8 +467,10 @@ struct ChildRewardsView: View {
         guard let child = currentChild else { return }
         
         if child.points >= reward.points {
-            rewardService.purchaseReward(reward, for: child.id, authService: authService)
-            showingRedemption = true
+            let success = rewardService.redeemReward(reward, byChild: child, authService: authService)
+            if success {
+                showingRedemption = true
+            }
         }
     }
 }
