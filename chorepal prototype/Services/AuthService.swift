@@ -884,6 +884,7 @@ class AuthService: ObservableObject {
             let childId = UUID(uuidString: document.documentID) ?? UUID()
             var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
             child.points = data["points"] as? Int ?? 0
+            child.totalPointsEarned = data["totalPointsEarned"] as? Int ?? 0
             
             print("✅ Child data loaded successfully: \(name) with PIN: \(pin)")
             print("🔧 Setting currentChild and authState to .authenticated")
