@@ -70,6 +70,8 @@ class AuthService: ObservableObject {
             let email = "\(cleanPhoneNumber)@parent.chorepal.com"
             
             print("Creating Firebase account with email: \(email)")
+            print("Phone number: \(phoneNumber)")
+            print("Clean phone number: \(cleanPhoneNumber)")
             
             // Create user with Firebase Auth
             let result = try await auth.createUser(withEmail: email, password: password)
@@ -149,6 +151,13 @@ class AuthService: ObservableObject {
             errorMessage = nil
         }
         
+        // Check if user is already signed in
+        if let currentUser = auth.currentUser {
+            print("User already signed in: \(currentUser.email ?? "no email")")
+            // Sign out first to avoid credential conflicts
+            try? await auth.signOut()
+        }
+        
         do {
             // Clean phone number (remove any formatting)
             let cleanPhoneNumber = phoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
@@ -157,6 +166,8 @@ class AuthService: ObservableObject {
             let email = "\(cleanPhoneNumber)@parent.chorepal.com"
             
             print("Signing in with email: \(email)")
+            print("Phone number: \(phoneNumber)")
+            print("Clean phone number: \(cleanPhoneNumber)")
             
             // Sign in with Firebase Auth
             try await auth.signIn(withEmail: email, password: password)
