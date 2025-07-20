@@ -295,25 +295,69 @@ class AuthService: ObservableObject {
             errorMessage = nil
         }
         
-        // Simulate network delay
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
-        // Find child by PIN
-        guard let child = children.first(where: { $0.pin == pin }) else {
+        do {
+            // First, try to find the child in the current parent's children
+            guard let parent = currentParent,
+                  let child = parent.children.first(where: { $0.pin == pin }) else {
+                await MainActor.run {
+                    errorMessage = "Invalid PIN or no parent logged in"
+                    isLoading = false
+                }
+                return false
+            }
+            
+            // Create Firebase account for child if it doesn't exist
+            let childEmail = "\(child.id.uuidString)@child.chorepal.com"
+            let childPassword = pin // Use PIN as password for simplicity
+            
+            do {
+                // Try to sign in with Firebase
+                try await auth.signIn(withEmail: childEmail, password: childPassword)
+                
+                // Firebase auth state listener will handle the rest
+                await MainActor.run {
+                    isLoading = false
+                }
+                
+                return true
+            } catch {
+                // If child doesn't exist in Firebase, create account
+                if let authError = error as? AuthErrorCode, authError.code == .userNotFound {
+                    // Create child account in Firebase
+                    let result = try await auth.createUser(withEmail: childEmail, password: childPassword)
+                    
+                    // Store child data in Firestore
+                    let childData: [String: Any] = [
+                        "name": child.name,
+                        "pin": child.pin,
+                        "parentId": child.parentId.uuidString,
+                        "points": child.points,
+                        "createdAt": FieldValue.serverTimestamp()
+                    ]
+                    
+                    try await db.collection("children").document(result.user.uid).setData(childData)
+                    
+                    // Firebase auth state listener will handle the rest
+                    await MainActor.run {
+                        isLoading = false
+                    }
+                    
+                    return true
+                } else {
+                    await MainActor.run {
+                        errorMessage = "Authentication error: \(error.localizedDescription)"
+                        isLoading = false
+                    }
+                    return false
+                }
+            }
+        } catch {
             await MainActor.run {
-                errorMessage = "Invalid PIN"
+                errorMessage = "Error: \(error.localizedDescription)"
                 isLoading = false
             }
             return false
         }
-        
-        await MainActor.run {
-            currentChild = child
-            authState = .authenticated
-            isLoading = false
-        }
-        
-        return true
     }
     
     // MARK: - Sign Out
@@ -395,15 +439,38 @@ class AuthService: ObservableObject {
         db.collection("children").document(userId).getDocument { [weak self] document, error in
             DispatchQueue.main.async {
                 if let document = document, document.exists {
-                    // Child data exists, load it
-                    // For now, we'll use mock data until we set up Firestore
-                    self?.authState = .authenticated
+                    // Child data exists, load it from Firestore
+                    if let data = document.data(),
+                       let name = data["name"] as? String,
+                       let pin = data["pin"] as? String,
+                       let parentIdString = data["parentId"] as? String,
+                       let parentId = UUID(uuidString: parentIdString) {
+                        
+                        let childId = UUID(uuidString: userId) ?? UUID()
+                        var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
+                        child.points = data["points"] as? Int ?? 0
+                        
+                        self?.currentChild = child
+                        self?.authState = .authenticated
+                    } else {
+                        // Fallback to mock data
+                        self?.createMockChild(userId: userId)
+                    }
                 } else {
-                    // New child, create profile
-                    self?.authState = .authenticated
+                    // New child, create profile with mock data for now
+                    self?.createMockChild(userId: userId)
                 }
             }
         }
+    }
+    
+    private func createMockChild(userId: String) {
+        // Create a mock child for testing
+        let childId = UUID(uuidString: userId) ?? UUID()
+        let child = Child(id: childId, name: "Test Child", pin: "1234", parentId: UUID())
+        
+        currentChild = child
+        authState = .authenticated
     }
     
     // MARK: - Helper Methods
