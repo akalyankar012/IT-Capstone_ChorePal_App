@@ -736,8 +736,11 @@ class AuthService: ObservableObject {
                         child.points = data["points"] as? Int ?? 0
                         
                         print("✅ Child data loaded successfully: \(name) with PIN: \(pin)")
+                        print("🔧 Setting currentChild and authState to .authenticated")
                         self?.currentChild = child
                         self?.authState = .authenticated
+                        print("🔧 Auth state updated: \(String(describing: self?.authState))")
+                        print("🔧 Current child set: \(self?.currentChild?.name ?? "nil")")
                     } else {
                         print("❌ Invalid child data structure")
                         // Fallback to mock data
