@@ -1,5 +1,7 @@
 import Foundation
 import Combine
+import Firebase
+import FirebaseAuth
 
 class AuthService: ObservableObject {
     @Published var currentParent: Parent?
@@ -8,13 +10,29 @@ class AuthService: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    // Mock data storage
+    private let auth = Auth.auth()
+    private let db = Firestore.firestore()
+    
+    // Temporary storage for testing
     private var parents: [Parent] = []
     private var children: [Child] = []
     
     init() {
         // Add sample data for testing
         setupSampleData()
+        
+        // Listen for Firebase auth state changes
+        auth.addStateDidChangeListener { [weak self] _, user in
+            DispatchQueue.main.async {
+                if let user = user {
+                    // User is signed in
+                    self?.handleFirebaseUser(user)
+                } else {
+                    // User is signed out
+                    self?.handleSignOut()
+                }
+            }
+        }
     }
     
     private func setupSampleData() {
@@ -43,29 +61,36 @@ class AuthService: ObservableObject {
             errorMessage = nil
         }
         
-        // Simulate network delay
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
-        // Check if phone number already exists
-        if parents.contains(where: { $0.phoneNumber == phoneNumber }) {
+        do {
+            // Create email from phone number for Firebase Auth
+            let email = "\(phoneNumber)@parent.chorepal.com"
+            
+            // Create user with Firebase Auth
+            let result = try await auth.createUser(withEmail: email, password: password)
+            
+            // Create parent profile in Firestore
+            let parentData: [String: Any] = [
+                "phoneNumber": phoneNumber,
+                "email": email,
+                "createdAt": FieldValue.serverTimestamp(),
+                "isVerified": false
+            ]
+            
+            try await db.collection("parents").document(result.user.uid).setData(parentData)
+            
             await MainActor.run {
-                errorMessage = "Phone number already registered"
+                authState = .verifyPhone
+                isLoading = false
+            }
+            
+            return true
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
                 isLoading = false
             }
             return false
         }
-        
-        // Create new parent
-        let newParent = Parent(phoneNumber: phoneNumber, password: password)
-        
-        await MainActor.run {
-            parents.append(newParent)
-            currentParent = newParent
-            authState = .verifyPhone
-            isLoading = false
-        }
-        
-        return true
     }
     
     func verifyPhoneCode(code: String) async -> Bool {
@@ -101,34 +126,26 @@ class AuthService: ObservableObject {
             errorMessage = nil
         }
         
-        // Simulate network delay
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
-        // Find parent
-        guard let parent = parents.first(where: { $0.phoneNumber == phoneNumber }) else {
+        do {
+            // Create email from phone number for Firebase Auth
+            let email = "\(phoneNumber)@parent.chorepal.com"
+            
+            // Sign in with Firebase Auth
+            try await auth.signIn(withEmail: email, password: password)
+            
+            // Firebase auth state listener will handle the rest
             await MainActor.run {
-                errorMessage = "Phone number not found"
+                isLoading = false
+            }
+            
+            return true
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
                 isLoading = false
             }
             return false
         }
-        
-        // Check password
-        guard parent.password == password else {
-            await MainActor.run {
-                errorMessage = "Incorrect password"
-                isLoading = false
-            }
-            return false
-        }
-        
-        await MainActor.run {
-            currentParent = parent
-            authState = .authenticated
-            isLoading = false
-        }
-        
-        return true
     }
     
     // MARK: - Child Management
@@ -257,10 +274,64 @@ class AuthService: ObservableObject {
     // MARK: - Sign Out
     
     func signOut() {
+        do {
+            try auth.signOut()
+            // Firebase auth state listener will handle the rest
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+    
+    // MARK: - Firebase User Handling
+    
+    private func handleFirebaseUser(_ user: User) {
+        // Check if this is a parent or child user
+        if user.email?.contains("@parent") == true {
+            // This is a parent user
+            loadParentData(userId: user.uid)
+        } else {
+            // This is a child user
+            loadChildData(userId: user.uid)
+        }
+    }
+    
+    private func handleSignOut() {
         currentParent = nil
         currentChild = nil
         authState = .none
         errorMessage = nil
+    }
+    
+    private func loadParentData(userId: String) {
+        // Load parent data from Firestore
+        db.collection("parents").document(userId).getDocument { [weak self] document, error in
+            DispatchQueue.main.async {
+                if let document = document, document.exists {
+                    // Parent data exists, load it
+                    // For now, we'll use mock data until we set up Firestore
+                    self?.authState = .authenticated
+                } else {
+                    // New parent, create profile
+                    self?.authState = .authenticated
+                }
+            }
+        }
+    }
+    
+    private func loadChildData(userId: String) {
+        // Load child data from Firestore
+        db.collection("children").document(userId).getDocument { [weak self] document, error in
+            DispatchQueue.main.async {
+                if let document = document, document.exists {
+                    // Child data exists, load it
+                    // For now, we'll use mock data until we set up Firestore
+                    self?.authState = .authenticated
+                } else {
+                    // New child, create profile
+                    self?.authState = .authenticated
+                }
+            }
+        }
     }
     
     // MARK: - Helper Methods
