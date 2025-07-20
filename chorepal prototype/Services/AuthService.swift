@@ -154,8 +154,24 @@ class AuthService: ObservableObject {
         // Check if user is already signed in
         if let currentUser = auth.currentUser {
             print("User already signed in: \(currentUser.email ?? "no email")")
-            // Sign out first to avoid credential conflicts
-            try? await auth.signOut()
+            
+            // If the user is already signed in with the same email, just return success
+            let cleanPhoneNumber = phoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+            let expectedEmail = "\(cleanPhoneNumber)@parent.chorepal.com"
+            
+            if currentUser.email == expectedEmail {
+                print("User already signed in with correct email, proceeding...")
+                // Load parent data
+                handleFirebaseUser(currentUser)
+                await MainActor.run {
+                    isLoading = false
+                }
+                return true
+            } else {
+                // Different user, sign out first
+                print("Different user signed in, signing out first...")
+                try? await auth.signOut()
+            }
         }
         
         do {
