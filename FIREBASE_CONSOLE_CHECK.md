@@ -11,31 +11,34 @@
 5. **Click "Enable"** if it's disabled
 6. **Save changes**
 
-### **Step 2: Verify Settings**
+### **Step 2: Create Firestore Database (CRITICAL!)**
+
+1. **In Firebase Console, go to:** Firestore Database
+2. **Click "Create database"**
+3. **Choose "Start in test mode"** (for development)
+4. **Select a location** (choose closest to you)
+5. **Click "Done"**
+6. **Wait for database to be created** (takes a few minutes)
+
+### **Step 3: Verify Settings**
 
 ✅ **Email/Password** should be **ENABLED**  
 ✅ **Project ID** should be: `chorepal-ios-app`  
 ✅ **Bundle ID** should be: `project1.chorepal-prototype`  
+✅ **Firestore Database** should be **CREATED**  
 
-### **Step 3: Test Again**
+### **Step 4: Test Again**
 
-After enabling Email/Password authentication:
+After enabling Email/Password authentication AND creating the Firestore database:
 1. **Run the app** in Xcode
 2. **Try signing in** with:
    - Phone: `1234567899`
    - Password: `password1234`
-3. **Should work now!** 🎉
+3. **Create a child account** - this should now save to Firestore
+4. **Try child login** with the PIN - this should now work! 🎉
 
-### **Common Issues:**
+## 🚨 **Important Notes:**
 
-❌ **"Email/Password not enabled"** → Enable it in Firebase Console  
-❌ **"Project ID mismatch"** → Check GoogleService-Info.plist  
-❌ **"Bundle ID mismatch"** → Check Xcode project settings  
-
-### **Still Having Issues?**
-
-If the error persists after enabling Email/Password:
-1. **Clean build** (Cmd+Shift+K in Xcode)
-2. **Delete app** from simulator
-3. **Rebuild and run**
-4. **Try creating a new account** instead of signing in 
+- **Firestore Database is REQUIRED** for child accounts and PINs to work
+- Without it, child creation and login will fail silently
+- The database setup takes 2-3 minutes to complete 

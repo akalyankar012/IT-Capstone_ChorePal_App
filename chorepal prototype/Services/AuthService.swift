@@ -283,8 +283,44 @@ class AuthService: ObservableObject {
     // MARK: - Child Management
     
     func addChild(_ child: Child) {
+        // Add to local arrays
         children.append(child)
         currentParent?.children.append(child)
+        
+        // Save to Firestore
+        Task {
+            await saveChildToFirestore(child)
+        }
+    }
+    
+    private func saveChildToFirestore(_ child: Child) async {
+        guard let parent = currentParent else {
+            print("Error: No parent found when saving child")
+            return
+        }
+        
+        do {
+            let childData: [String: Any] = [
+                "name": child.name,
+                "pin": child.pin,
+                "parentId": parent.id.uuidString,
+                "points": child.points,
+                "createdAt": FieldValue.serverTimestamp()
+            ]
+            
+            // Save child to Firestore
+            try await db.collection("children").document(child.id.uuidString).setData(childData)
+            print("Child saved to Firestore successfully: \(child.name)")
+            
+            // Update parent document to include child reference
+            try await db.collection("parents").document(parent.id.uuidString).updateData([
+                "children": FieldValue.arrayUnion([child.id.uuidString])
+            ])
+            print("Parent updated with child reference")
+            
+        } catch {
+            print("Error saving child to Firestore: \(error)")
+        }
     }
     
     func removeChild(_ child: Child) {
@@ -501,6 +537,9 @@ class AuthService: ObservableObject {
                         self?.currentParent = parent
                         self?.authState = .authenticated
                         print("Parent data loaded successfully: \(parent.phoneNumber)")
+                        
+                        // Load children for this parent
+                        self?.loadChildrenForParent(parentId: parentId)
                     } else {
                         print("Parent document exists but data is invalid, using mock data")
                         // Fallback to mock data
@@ -513,6 +552,47 @@ class AuthService: ObservableObject {
                 }
             }
         }
+    }
+    
+    private func loadChildrenForParent(parentId: UUID) {
+        print("Loading children for parent: \(parentId)")
+        db.collection("children")
+            .whereField("parentId", isEqualTo: parentId.uuidString)
+            .getDocuments { [weak self] snapshot, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("Error loading children: \(error)")
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents else {
+                        print("No children found for parent")
+                        return
+                    }
+                    
+                    var loadedChildren: [Child] = []
+                    for document in documents {
+                        let data = document.data()
+                        if let name = data["name"] as? String,
+                           let pin = data["pin"] as? String,
+                           let parentIdString = data["parentId"] as? String,
+                           let parentId = UUID(uuidString: parentIdString) {
+                            
+                            let childId = UUID(uuidString: document.documentID) ?? UUID()
+                            var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
+                            child.points = data["points"] as? Int ?? 0
+                            
+                            loadedChildren.append(child)
+                            print("Loaded child: \(name) with PIN: \(pin)")
+                        }
+                    }
+                    
+                    // Update parent with loaded children
+                    self?.currentParent?.children = loadedChildren
+                    self?.children = loadedChildren
+                    print("Loaded \(loadedChildren.count) children for parent")
+                }
+            }
     }
     
     private func createMockParent(userId: String) {
