@@ -185,8 +185,29 @@ class AuthService: ObservableObject {
             print("Phone number: \(phoneNumber)")
             print("Clean phone number: \(cleanPhoneNumber)")
             
-            // Sign in with Firebase Auth
-            try await auth.signIn(withEmail: email, password: password)
+            // Try to sign in with Firebase Auth
+            do {
+                try await auth.signIn(withEmail: email, password: password)
+            } catch {
+                // If user doesn't exist, create the account
+                if let authError = error as? AuthErrorCode, authError.code == .userNotFound {
+                    print("User not found, creating new account...")
+                    let result = try await auth.createUser(withEmail: email, password: password)
+                    
+                    // Store parent data in Firestore
+                    let parentData: [String: Any] = [
+                        "phoneNumber": cleanPhoneNumber,
+                        "isVerified": true,
+                        "createdAt": FieldValue.serverTimestamp()
+                    ]
+                    
+                    try await db.collection("parents").document(result.user.uid).setData(parentData)
+                    print("New parent account created successfully")
+                } else {
+                    // Re-throw other errors
+                    throw error
+                }
+            }
             
             // Firebase auth state listener will handle the rest
             await MainActor.run {
