@@ -80,20 +80,24 @@ struct TimeRangeSelector: View {
     @Binding var selectedRange: TimeRange
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 0) {
             ForEach(TimeRange.allCases, id: \.self) { range in
                 Button(action: { selectedRange = range }) {
                     Text(range.title)
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(selectedRange == range ? .white : .primary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
                         .background(selectedRange == range ? Color(hex: "#a2cee3") : Color(.systemGray6))
-                        .cornerRadius(20)
+                        .cornerRadius(0)
                 }
+                .buttonStyle(PlainButtonStyle())
             }
         }
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
         .padding(.horizontal, 20)
     }
 }
@@ -108,10 +112,11 @@ struct FamilyOverviewStats: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
+            HStack(alignment: .center) {
                 Image(systemName: "chart.bar.fill")
                     .font(.title2)
                     .foregroundColor(themeColor)
+                    .frame(width: 24, height: 24)
                 Text("Family Overview")
                     .font(.title3)
                     .fontWeight(.semibold)
@@ -177,11 +182,12 @@ struct StatisticsCard: View {
     let trend: TrendDirection?
     
     var body: some View {
-        VStack(spacing: 8) {
-            HStack {
+        VStack(spacing: 12) {
+            HStack(alignment: .center) {
                 Image(systemName: icon)
                     .font(.title2)
                     .foregroundColor(color)
+                    .frame(width: 24, height: 24)
                 
                 Spacer()
                 
@@ -189,17 +195,22 @@ struct StatisticsCard: View {
                     Image(systemName: trend.icon)
                         .font(.caption)
                         .foregroundColor(trend.color)
+                        .frame(width: 16, height: 16)
                 }
             }
             
-            Text(value)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.primary)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 4) {
+                Text(value)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
@@ -217,10 +228,11 @@ struct ChorePerformanceChart: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
+            HStack(alignment: .center) {
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .font(.title2)
                     .foregroundColor(themeColor)
+                    .frame(width: 24, height: 24)
                 Text("Chore Performance")
                     .font(.title3)
                     .fontWeight(.semibold)
@@ -339,10 +351,11 @@ struct ChildPerformanceComparison: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
+            HStack(alignment: .center) {
                 Image(systemName: "person.3.fill")
                     .font(.title2)
                     .foregroundColor(themeColor)
+                    .frame(width: 24, height: 24)
                 Text("Child Performance")
                     .font(.title3)
                     .fontWeight(.semibold)
@@ -405,6 +418,7 @@ struct ChildPerformanceRow: View {
                             Image(systemName: "star.fill")
                                 .font(.caption)
                                 .foregroundColor(.yellow)
+                                .frame(width: 12, height: 12)
                             Text("\(child.points) pts")
                                 .font(.caption)
                                 .foregroundColor(.gray)
@@ -414,6 +428,7 @@ struct ChildPerformanceRow: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.caption)
                                 .foregroundColor(.green)
+                                .frame(width: 12, height: 12)
                             Text("\(completedChores) completed")
                                 .font(.caption)
                                 .foregroundColor(.gray)
@@ -446,10 +461,11 @@ struct RewardStatistics: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
+            HStack(alignment: .center) {
                 Image(systemName: "gift.fill")
                     .font(.title2)
                     .foregroundColor(themeColor)
+                    .frame(width: 24, height: 24)
                 Text("Reward Statistics")
                     .font(.title3)
                     .fontWeight(.semibold)
@@ -514,10 +530,11 @@ struct RecentActivitySection: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
+            HStack(alignment: .center) {
                 Image(systemName: "clock.fill")
                     .font(.title2)
                     .foregroundColor(themeColor)
+                    .frame(width: 24, height: 24)
                 Text("Recent Activity")
                     .font(.title3)
                     .fontWeight(.semibold)
