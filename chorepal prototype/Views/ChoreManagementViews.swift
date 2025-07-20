@@ -136,32 +136,7 @@ struct ChoreManagementView: View {
     }
 }
 
-// MARK: - Filter Pill
-struct FilterPill: View {
-    let status: ChoreStatus
-    let isSelected: Bool
-    let action: () -> Void
-    
-    private let themeColor = Color(hex: "#a2cee3")
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: status.icon)
-                    .font(.caption)
-                Text(status.title)
-                    .font(.caption)
-                    .fontWeight(.medium)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(isSelected ? themeColor : Color(.systemGray6))
-            .foregroundColor(isSelected ? .white : .primary)
-            .cornerRadius(20)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
+
 
 // MARK: - Chore Management Row View
 struct ChoreManagementRowView: View {

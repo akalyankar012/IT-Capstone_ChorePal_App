@@ -283,7 +283,9 @@ struct EmptyChildrenView: View {
 struct QuickActionsSection: View {
     @ObservedObject var choreService: ChoreService
     @ObservedObject var authService: AuthService
+    @StateObject private var rewardService = RewardService()
     @State private var showingChoreManagement = false
+    @State private var showingRewardManagement = false
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -311,20 +313,14 @@ struct QuickActionsSection: View {
                     showingChoreManagement = true
                 }
                 
-                QuickActionCard(
-                    title: "View Children",
-                    icon: "person.2.fill",
-                    color: .blue
-                ) {
-                    // Will be implemented to show children overview
-                }
+
                 
                 QuickActionCard(
                     title: "Manage Rewards",
                     icon: "gift.fill",
                     color: .purple
                 ) {
-                    // Will be implemented when we add reward management
+                    showingRewardManagement = true
                 }
                 
                 QuickActionCard(
@@ -342,6 +338,9 @@ struct QuickActionsSection: View {
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
         .fullScreenCover(isPresented: $showingChoreManagement) {
             ChoreManagementView(choreService: choreService, authService: authService)
+        }
+        .fullScreenCover(isPresented: $showingRewardManagement) {
+            ManageRewardsView(rewardService: rewardService, authService: authService)
         }
     }
 }

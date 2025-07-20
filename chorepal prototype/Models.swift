@@ -33,6 +33,54 @@ enum AuthState {
     case authenticated
 }
 
+enum RewardCategory: String, CaseIterable, Codable {
+    case food = "Food & Treats"
+    case entertainment = "Entertainment"
+    case privileges = "Privileges"
+    case toys = "Toys & Games"
+    case other = "Other"
+    
+    var icon: String {
+        switch self {
+        case .food: return "fork.knife"
+        case .entertainment: return "tv"
+        case .privileges: return "star"
+        case .toys: return "gamecontroller"
+        case .other: return "gift"
+        }
+    }
+    
+    var color: String {
+        switch self {
+        case .food: return "#FF6B6B"
+        case .entertainment: return "#4ECDC4"
+        case .privileges: return "#45B7D1"
+        case .toys: return "#96CEB4"
+        case .other: return "#FFEAA7"
+        }
+    }
+}
+
+enum RewardStatus: String, CaseIterable {
+    case all = "All"
+    case available = "Available"
+    case purchased = "Purchased"
+    case unavailable = "Unavailable"
+    
+    var title: String {
+        return rawValue
+    }
+    
+    var icon: String {
+        switch self {
+        case .all: return "list.bullet"
+        case .available: return "checkmark.circle"
+        case .purchased: return "bag"
+        case .unavailable: return "xmark.circle"
+        }
+    }
+}
+
 // MARK: - Existing Models
 struct Chore: Identifiable, Codable {
     let id = UUID()
@@ -73,16 +121,37 @@ struct Chore: Identifiable, Codable {
     ]
 }
 
-struct Reward: Identifiable {
+struct Reward: Identifiable, Codable {
     let id = UUID()
     var name: String
+    var description: String
     var points: Int
+    var category: RewardCategory
+    var isAvailable: Bool
     var purchasedAt: Date?
+    var purchasedByChildId: UUID?
+    var createdAt: Date
+    
+    init(name: String, description: String = "", points: Int, category: RewardCategory = .other, isAvailable: Bool = true, purchasedAt: Date? = nil, purchasedByChildId: UUID? = nil) {
+        self.name = name
+        self.description = description
+        self.points = points
+        self.category = category
+        self.isAvailable = isAvailable
+        self.purchasedAt = purchasedAt
+        self.purchasedByChildId = purchasedByChildId
+        self.createdAt = Date()
+    }
     
     static let sampleRewards = [
-        Reward(name: "Candy Bar", points: 15, purchasedAt: nil),
-        Reward(name: "Movie Ticket", points: 55, purchasedAt: nil),
-        Reward(name: "Free \"Skip Chore\" Pass", points: 200, purchasedAt: nil)
+        Reward(name: "Candy Bar", description: "Choose your favorite candy", points: 15, category: .food),
+        Reward(name: "Movie Ticket", description: "Watch a movie of your choice", points: 55, category: .entertainment),
+        Reward(name: "Skip Chore Pass", description: "Skip one chore without penalty", points: 200, category: .privileges),
+        Reward(name: "Ice Cream", description: "Get ice cream from your favorite place", points: 25, category: .food),
+        Reward(name: "Video Game Time", description: "Extra 30 minutes of video game time", points: 30, category: .entertainment),
+        Reward(name: "New Toy", description: "Pick a toy under $20", points: 100, category: .toys),
+        Reward(name: "Stay Up Late", description: "Stay up 30 minutes past bedtime", points: 75, category: .privileges),
+        Reward(name: "Pizza Night", description: "Choose dinner for the family", points: 150, category: .food)
     ]
 }
 
