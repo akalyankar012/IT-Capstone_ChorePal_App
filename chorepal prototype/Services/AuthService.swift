@@ -382,6 +382,11 @@ class AuthService: ObservableObject {
         if currentChild?.id == childId {
             currentChild?.points += points
         }
+        
+        // Save points update to Firestore
+        Task {
+            await updateChildPointsInFirestore(childId: childId, points: children.first(where: { $0.id == childId })?.points ?? 0)
+        }
     }
     
     func deductPointsFromChild(childId: UUID, points: Int) {
@@ -396,6 +401,11 @@ class AuthService: ObservableObject {
         // Update current child if it's the same child
         if currentChild?.id == childId {
             currentChild?.points = max(0, (currentChild?.points ?? 0) - points)
+        }
+        
+        // Save points update to Firestore
+        Task {
+            await updateChildPointsInFirestore(childId: childId, points: children.first(where: { $0.id == childId })?.points ?? 0)
         }
     }
     
@@ -412,10 +422,30 @@ class AuthService: ObservableObject {
         if currentChild?.id == childId {
             currentChild?.points = points
         }
+        
+        // Save points update to Firestore
+        Task {
+            await updateChildPointsInFirestore(childId: childId, points: points)
+        }
     }
     
     func getChildrenForCurrentParent() -> [Child] {
         return currentParent?.children ?? []
+    }
+    
+    // MARK: - Firestore Points Management
+    
+    private func updateChildPointsInFirestore(childId: UUID, points: Int) async {
+        do {
+            try await db.collection("children").document(childId.uuidString).updateData([
+                "points": points,
+                "updatedAt": FieldValue.serverTimestamp()
+            ])
+            print("✅ Child points updated in Firestore: \(childId) -> \(points) points")
+            
+        } catch {
+            print("❌ Error updating child points in Firestore: \(error)")
+        }
     }
     
     func addChild(name: String) async -> String {
