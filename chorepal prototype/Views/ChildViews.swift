@@ -140,9 +140,11 @@ struct ChildDashboardView: View {
         }
         .preferredColorScheme(selectedTheme == .light ? .light : .dark)
         .onAppear {
-            // Load chores from Firestore when child dashboard appears
-            Task {
-                await choreService.loadChoresFromFirestore()
+            // Load chores for this specific child from Firestore
+            if let childId = authService.currentChild?.id {
+                Task {
+                    await choreService.loadChoresForChild(childId)
+                }
             }
         }
     }

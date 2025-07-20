@@ -11,8 +11,10 @@ class ChoreService: ObservableObject {
     private let db = Firestore.firestore()
     
     init() {
-        // Load sample data for testing
-        loadSampleData()
+        // Load chores from Firestore instead of sample data
+        Task {
+            await loadChoresFromFirestore()
+        }
     }
     
     private func loadSampleData() {
@@ -204,10 +206,24 @@ class ChoreService: ObservableObject {
                     if let title = data["title"] as? String,
                        let description = data["description"] as? String,
                        let points = data["points"] as? Int,
-                       let dueDate = data["dueDate"] as? Date,
                        let isCompleted = data["isCompleted"] as? Bool,
-                       let isRequired = data["isRequired"] as? Bool,
-                       let createdAt = data["createdAt"] as? Date {
+                       let isRequired = data["isRequired"] as? Bool {
+                        
+                        // Handle dueDate - it might be stored as Timestamp
+                        var dueDate = Date()
+                        if let timestamp = data["dueDate"] as? Timestamp {
+                            dueDate = timestamp.dateValue()
+                        } else if let date = data["dueDate"] as? Date {
+                            dueDate = date
+                        }
+                        
+                        // Handle createdAt - it might be stored as Timestamp
+                        var createdAt = Date()
+                        if let timestamp = data["createdAt"] as? Timestamp {
+                            createdAt = timestamp.dateValue()
+                        } else if let date = data["createdAt"] as? Date {
+                            createdAt = date
+                        }
                         
                         let choreId = UUID(uuidString: document.documentID) ?? UUID()
                         let assignedToChildId = (data["assignedToChildId"] as? String).flatMap { UUID(uuidString: $0) }
@@ -238,6 +254,77 @@ class ChoreService: ObservableObject {
                 self.isLoading = false
                 self.errorMessage = "Failed to load chores: \(error.localizedDescription)"
                 print("❌ Error loading chores from Firestore: \(error)")
+            }
+        }
+    }
+    
+    // Load chores for a specific child
+    func loadChoresForChild(_ childId: UUID) async {
+        await MainActor.run {
+            isLoading = true
+        }
+        
+        do {
+            let snapshot = try await db.collection("chores")
+                .whereField("assignedToChildId", isEqualTo: childId.uuidString)
+                .getDocuments()
+            
+            await MainActor.run {
+                var loadedChores: [Chore] = []
+                
+                for document in snapshot.documents {
+                    let data = document.data()
+                    
+                    if let title = data["title"] as? String,
+                       let description = data["description"] as? String,
+                       let points = data["points"] as? Int,
+                       let isCompleted = data["isCompleted"] as? Bool,
+                       let isRequired = data["isRequired"] as? Bool {
+                        
+                        // Handle dueDate - it might be stored as Timestamp
+                        var dueDate = Date()
+                        if let timestamp = data["dueDate"] as? Timestamp {
+                            dueDate = timestamp.dateValue()
+                        } else if let date = data["dueDate"] as? Date {
+                            dueDate = date
+                        }
+                        
+                        // Handle createdAt - it might be stored as Timestamp
+                        var createdAt = Date()
+                        if let timestamp = data["createdAt"] as? Timestamp {
+                            createdAt = timestamp.dateValue()
+                        } else if let date = data["createdAt"] as? Date {
+                            createdAt = date
+                        }
+                        
+                        let choreId = UUID(uuidString: document.documentID) ?? UUID()
+                        
+                        let chore = Chore(
+                            id: choreId,
+                            title: title,
+                            description: description,
+                            points: points,
+                            dueDate: dueDate,
+                            isCompleted: isCompleted,
+                            isRequired: isRequired,
+                            assignedToChildId: childId,
+                            createdAt: createdAt
+                        )
+                        
+                        loadedChores.append(chore)
+                    }
+                }
+                
+                self.chores = loadedChores
+                self.isLoading = false
+                print("✅ Loaded \(loadedChores.count) chores for child \(childId) from Firestore")
+            }
+            
+        } catch {
+            await MainActor.run {
+                self.isLoading = false
+                self.errorMessage = "Failed to load chores: \(error.localizedDescription)"
+                print("❌ Error loading chores for child from Firestore: \(error)")
             }
         }
     }
