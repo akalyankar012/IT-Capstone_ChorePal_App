@@ -466,6 +466,22 @@ class AuthService: ObservableObject {
         loadChildrenForParent(parentId: parentId)
     }
     
+    // MARK: - Data Migration
+    
+    private func migrateChildDataIfNeeded(_ child: Child) async {
+        // Check if child needs migration (has points but no totalPointsEarned)
+        if child.points > 0 && child.totalPointsEarned == 0 {
+            print("🔄 Migrating child data: \(child.name) - setting totalPointsEarned to \(child.points)")
+            
+            // Update the child's totalPointsEarned to match their current points
+            await updateChildPointsInFirestore(
+                childId: child.id, 
+                points: child.points, 
+                totalPointsEarned: child.points
+            )
+        }
+    }
+    
     func addChild(name: String) async -> String {
         await MainActor.run {
             isLoading = true
@@ -745,9 +761,15 @@ class AuthService: ObservableObject {
                             var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
                             child.points = data["points"] as? Int ?? 0
                             child.totalPointsEarned = data["totalPointsEarned"] as? Int ?? 0
+                            print("🔍 Loading child from Firestore: \(name) - Points: \(child.points), Total Earned: \(child.totalPointsEarned)")
                             
                             loadedChildren.append(child)
                             print("Loaded child: \(name) with PIN: \(pin)")
+                            
+                            // Migrate child data if needed
+                            Task {
+                                await self?.migrateChildDataIfNeeded(child)
+                            }
                         }
                     }
                     
@@ -885,6 +907,7 @@ class AuthService: ObservableObject {
             var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
             child.points = data["points"] as? Int ?? 0
             child.totalPointsEarned = data["totalPointsEarned"] as? Int ?? 0
+            print("🔍 Loading child from document: \(name) - Points: \(child.points), Total Earned: \(child.totalPointsEarned)")
             
             print("✅ Child data loaded successfully: \(name) with PIN: \(pin)")
             print("🔧 Setting currentChild and authState to .authenticated")

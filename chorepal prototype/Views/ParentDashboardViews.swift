@@ -185,7 +185,13 @@ struct FamilyOverviewCard: View {
     }
     
     private var totalFamilyPoints: Int {
-        authService.currentParent?.children.reduce(0) { $0 + $1.totalPointsEarned } ?? 0
+        let total = authService.currentParent?.children.reduce(0) { $0 + $1.totalPointsEarned } ?? 0
+        print("🔍 Family Overview - Total Points: \(total)")
+        print("🔍 Children count: \(authService.currentParent?.children.count ?? 0)")
+        for child in authService.currentParent?.children ?? [] {
+            print("🔍 Child: \(child.name) - Points: \(child.points), Total Earned: \(child.totalPointsEarned)")
+        }
+        return total
     }
     
 
