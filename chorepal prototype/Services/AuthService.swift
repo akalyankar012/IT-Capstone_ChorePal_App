@@ -428,15 +428,35 @@ class AuthService: ObservableObject {
         }
         
         do {
-            // First, try to find the child in the current parent's children
-            guard let parent = currentParent,
-                  let child = parent.children.first(where: { $0.pin == pin }) else {
+            // Search for child in Firestore by PIN
+            let snapshot = try await db.collection("children")
+                .whereField("pin", isEqualTo: pin)
+                .getDocuments()
+            
+            guard let document = snapshot.documents.first else {
                 await MainActor.run {
-                    errorMessage = "Invalid PIN or no parent logged in"
+                    errorMessage = "Invalid PIN - no child found"
                     isLoading = false
                 }
                 return false
             }
+            
+            let data = document.data()
+            guard let name = data["name"] as? String,
+                  let childPin = data["pin"] as? String,
+                  let parentIdString = data["parentId"] as? String else {
+                await MainActor.run {
+                    errorMessage = "Invalid child data"
+                    isLoading = false
+                }
+                return false
+            }
+            
+            // Create child object from Firestore data
+            let childId = UUID(uuidString: document.documentID) ?? UUID()
+            let parentId = UUID(uuidString: parentIdString) ?? UUID()
+            var child = Child(id: childId, name: name, pin: childPin, parentId: parentId)
+            child.points = data["points"] as? Int ?? 0
             
             // Create Firebase account for child if it doesn't exist
             let childEmail = "\(child.id.uuidString)@child.chorepal.com"
@@ -458,11 +478,11 @@ class AuthService: ObservableObject {
                     // Create child account in Firebase
                     let result = try await auth.createUser(withEmail: childEmail, password: childPassword)
                     
-                    // Store child data in Firestore
+                    // Store child data in Firestore (update existing document)
                     let childData: [String: Any] = [
                         "name": child.name,
                         "pin": child.pin,
-                        "parentId": child.parentId.uuidString,
+                        "parentId": parentIdString,
                         "points": child.points,
                         "createdAt": FieldValue.serverTimestamp()
                     ]
@@ -565,8 +585,15 @@ class AuthService: ObservableObject {
     
     private func loadChildrenForParent(parentId: UUID) {
         print("Loading children for parent: \(parentId)")
+        
+        // Get the current Firebase user to get the correct parent document ID
+        guard let currentUser = auth.currentUser else {
+            print("Error: No Firebase user found when loading children")
+            return
+        }
+        
         db.collection("children")
-            .whereField("parentId", isEqualTo: parentId.uuidString)
+            .whereField("parentId", isEqualTo: currentUser.uid) // Use Firebase Auth UID
             .getDocuments { [weak self] snapshot, error in
                 DispatchQueue.main.async {
                     if let error = error {
@@ -584,8 +611,7 @@ class AuthService: ObservableObject {
                         let data = document.data()
                         if let name = data["name"] as? String,
                            let pin = data["pin"] as? String,
-                           let parentIdString = data["parentId"] as? String,
-                           let parentId = UUID(uuidString: parentIdString) {
+                           let parentIdString = data["parentId"] as? String {
                             
                             let childId = UUID(uuidString: document.documentID) ?? UUID()
                             var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
