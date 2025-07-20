@@ -473,9 +473,12 @@ class AuthService: ObservableObject {
             let childEmail = "\(child.id.uuidString)@child.chorepal.com"
             let childPassword = pin // Use PIN as password for simplicity
             
+            print("🔐 Attempting Firebase Auth with email: \(childEmail)")
+            
             do {
                 // Try to sign in with Firebase
                 try await auth.signIn(withEmail: childEmail, password: childPassword)
+                print("✅ Firebase Auth sign in successful")
                 
                 // Firebase auth state listener will handle the rest
                 await MainActor.run {
@@ -484,29 +487,47 @@ class AuthService: ObservableObject {
                 
                 return true
             } catch {
-                // If child doesn't exist in Firebase, create account
-                if let authError = error as? AuthErrorCode, authError.code == .userNotFound {
-                    // Create child account in Firebase
-                    let result = try await auth.createUser(withEmail: childEmail, password: childPassword)
+                print("❌ Firebase Auth sign in failed: \(error.localizedDescription)")
+                
+                // Check if it's a user not found error or invalid credential
+                if let authError = error as? AuthErrorCode {
+                    print("🔍 Auth error code: \(authError.code.rawValue)")
                     
-                    // Store child data in Firestore (update existing document)
-                    let childData: [String: Any] = [
-                        "name": child.name,
-                        "pin": child.pin,
-                        "parentId": parentIdString,
-                        "points": child.points,
-                        "createdAt": FieldValue.serverTimestamp()
-                    ]
-                    
-                    try await db.collection("children").document(result.user.uid).setData(childData)
-                    
-                    // Firebase auth state listener will handle the rest
-                    await MainActor.run {
-                        isLoading = false
+                    if authError.code == .userNotFound || authError.code.rawValue == 17004 {
+                        print("👶 Creating new Firebase Auth account for child")
+                        
+                        // Create child account in Firebase
+                        let result = try await auth.createUser(withEmail: childEmail, password: childPassword)
+                        print("✅ Firebase Auth account created successfully")
+                        
+                        // Store child data in Firestore (update existing document)
+                        let childData: [String: Any] = [
+                            "name": child.name,
+                            "pin": child.pin,
+                            "parentId": parentIdString,
+                            "points": child.points,
+                            "createdAt": FieldValue.serverTimestamp()
+                        ]
+                        
+                        try await db.collection("children").document(result.user.uid).setData(childData)
+                        print("✅ Child data updated in Firestore with new Firebase UID")
+                        
+                        // Firebase auth state listener will handle the rest
+                        await MainActor.run {
+                            isLoading = false
+                        }
+                        
+                        return true
+                    } else {
+                        print("❌ Unexpected auth error: \(authError.code)")
+                        await MainActor.run {
+                            errorMessage = "Authentication error: \(error.localizedDescription)"
+                            isLoading = false
+                        }
+                        return false
                     }
-                    
-                    return true
                 } else {
+                    print("❌ Non-auth error: \(error)")
                     await MainActor.run {
                         errorMessage = "Authentication error: \(error.localizedDescription)"
                         isLoading = false
