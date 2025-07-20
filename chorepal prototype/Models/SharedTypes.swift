@@ -1,5 +1,17 @@
 import SwiftUI
 
+// MARK: - Theme Manager
+enum Theme: String {
+    case light, dark
+    
+    var systemName: String {
+        switch self {
+        case .light: return "sun.max.fill"
+        case .dark: return "moon.fill"
+        }
+    }
+}
+
 // MARK: - Activity Item
 struct ActivityItem {
     let id: UUID

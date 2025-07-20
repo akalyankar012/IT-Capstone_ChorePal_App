@@ -8,6 +8,8 @@ struct ChildDashboardView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedTab = 0
     @State private var showingRewardRedemption = false
+    @AppStorage("selectedTheme") private var selectedTheme: Theme = .light
+    @State private var isAnimating = false
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -79,6 +81,20 @@ struct ChildDashboardView: View {
                         isSelected: selectedTab == 2,
                         action: { selectedTab = 2 }
                     )
+                    
+                    TabButton(
+                        title: "Calendar",
+                        icon: "calendar",
+                        isSelected: selectedTab == 3,
+                        action: { selectedTab = 3 }
+                    )
+                    
+                    TabButton(
+                        title: "Settings",
+                        icon: "gearshape",
+                        isSelected: selectedTab == 4,
+                        action: { selectedTab = 4 }
+                    )
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -103,6 +119,19 @@ struct ChildDashboardView: View {
                         authService: authService
                     )
                     .tag(2)
+                    
+                    ChildCalendarView(
+                        choreService: choreService,
+                        authService: authService
+                    )
+                    .tag(3)
+                    
+                    ChildSettingsView(
+                        selectedTheme: $selectedTheme,
+                        authService: authService,
+                        isAnimating: $isAnimating
+                    )
+                    .tag(4)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
@@ -115,6 +144,7 @@ struct ChildDashboardView: View {
                 authService: authService
             )
         }
+        .preferredColorScheme(selectedTheme == .light ? .light : .dark)
     }
     
     private var currentChild: Child? {
@@ -821,5 +851,335 @@ struct RewardRedemptionView: View {
             }
             .navigationBarHidden(true)
         }
+    }
+} 
+
+// MARK: - Child Calendar View
+struct ChildCalendarView: View {
+    @ObservedObject var choreService: ChoreService
+    @ObservedObject var authService: AuthService
+    @State private var selectedChore: Chore?
+    @State private var currentMonth = Date()
+    
+    private let themeColor = Color(hex: "#a2cee3")
+    
+    private func isSameDay(_ date1: Date, _ date2: Date) -> Bool {
+        let calendar = Calendar.current
+        return calendar.isDate(date1, equalTo: date2, toGranularity: .day)
+    }
+    
+    private func isSameMonth(_ date1: Date, _ date2: Date) -> Bool {
+        let calendar = Calendar.current
+        return calendar.isDate(date1, equalTo: date2, toGranularity: .month)
+    }
+    
+    private var calendar: Calendar {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 1 // Sunday = 1
+        return calendar
+    }
+    
+    private var currentMonthComponents: DateComponents {
+        let components = calendar.dateComponents([.year, .month], from: currentMonth)
+        return components
+    }
+    
+    private var firstDayOfMonth: Date {
+        calendar.date(from: currentMonthComponents)!
+    }
+    
+    private var lastDayOfMonth: Date {
+        calendar.date(byAdding: DateComponents(month: 1, day: -1), to: firstDayOfMonth)!
+    }
+    
+    private var daysInMonth: Int {
+        calendar.range(of: .day, in: .month, for: currentMonth)!.count
+    }
+    
+    private var firstWeekdayOfMonth: Int {
+        let weekday = calendar.component(.weekday, from: firstDayOfMonth)
+        return weekday
+    }
+    
+    private var numberOfWeeks: Int {
+        let firstWeekday = firstWeekdayOfMonth - 1
+        let totalDays = firstWeekday + daysInMonth
+        return Int(ceil(Double(totalDays) / 7.0))
+    }
+    
+    private func dateFor(day: Int) -> Date {
+        var components = currentMonthComponents
+        components.day = day
+        return calendar.date(from: components) ?? Date()
+    }
+    
+    private var monthString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter.string(from: currentMonth)
+    }
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                // Calendar header
+                HStack {
+                    Button(action: {
+                        withAnimation {
+                            currentMonth = calendar.date(byAdding: .month, value: -1, to: currentMonth) ?? currentMonth
+                        }
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(themeColor)
+                    }
+                    
+                    Spacer()
+                    
+                    Text(monthString)
+                        .font(.system(size: 24, weight: .bold))
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        withAnimation {
+                            currentMonth = calendar.date(byAdding: .month, value: 1, to: currentMonth) ?? currentMonth
+                        }
+                    }) {
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(themeColor)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 24)
+                
+                // Calendar grid
+                VStack(spacing: 24) {
+                    // Days of week header
+                    HStack(spacing: 0) {
+                        ForEach(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], id: \.self) { day in
+                            Text(day)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.gray)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Calendar days
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 12) {
+                        ForEach(0..<(numberOfWeeks * 7), id: \.self) { index in
+                            let weekday = index % 7
+                            let weekNumber = index / 7
+                            let day = (weekNumber * 7 + weekday + 1) - (firstWeekdayOfMonth - 1)
+                            
+                            if day > 0 && day <= daysInMonth {
+                                let date = dateFor(day: day)
+                                let isSelectedDate = selectedChore.map { isSameDay(date, $0.dueDate) } ?? false
+                                let hasChoresDueToday = childChores.contains { isSameDay(date, $0.dueDate) }
+                                
+                                Text("\(day)")
+                                    .font(.system(size: 16))
+                                    .frame(height: 36)
+                                    .frame(maxWidth: .infinity)
+                                    .background(
+                                        Circle()
+                                            .fill(isSelectedDate ? themeColor : (hasChoresDueToday ? themeColor.opacity(0.2) : Color.clear))
+                                            .frame(width: 36, height: 36)
+                                    )
+                                    .foregroundColor(isSelectedDate ? .white : .primary)
+                            } else {
+                                Color.clear
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 36)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+                
+                // Divider with proper spacing
+                Divider()
+                    .padding(.vertical, 24)
+                
+                // Chores List
+                VStack(spacing: 0) {
+                    ForEach(childChores.indices, id: \.self) { index in
+                        ChildChoreRow(
+                            chore: childChores[index],
+                            onComplete: {
+                                completeChore(childChores[index])
+                            }
+                        )
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3)) {
+                                if selectedChore?.id == childChores[index].id {
+                                    selectedChore = nil // Deselect if tapping the same chore
+                                } else {
+                                    selectedChore = childChores[index]
+                                    // Navigate to the month of the selected chore
+                                    if !isSameMonth(currentMonth, childChores[index].dueDate) {
+                                        currentMonth = childChores[index].dueDate
+                                    }
+                                }
+                            }
+                        }
+                        .background(selectedChore?.id == childChores[index].id ? themeColor.opacity(0.1) : Color.clear)
+                        
+                        if index < childChores.count - 1 {
+                            Divider()
+                                .padding(.leading, 20)
+                        }
+                    }
+                }
+                
+                Spacer(minLength: 100)
+            }
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+    
+    private var currentChild: Child? {
+        authService.currentChild
+    }
+    
+    private var childChores: [Chore] {
+        guard let child = currentChild else { return [] }
+        return choreService.getChoresForChild(child.id)
+    }
+    
+    private func completeChore(_ chore: Chore) {
+        var updatedChore = chore
+        updatedChore.isCompleted.toggle()
+        choreService.updateChore(updatedChore)
+    }
+}
+
+// MARK: - Child Settings View
+struct ChildSettingsView: View {
+    @Binding var selectedTheme: Theme
+    @ObservedObject var authService: AuthService
+    @Binding var isAnimating: Bool
+    @Environment(\.dismiss) private var dismiss
+    
+    private let themeColor = Color(hex: "#a2cee3")
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Profile Section
+                VStack(spacing: 16) {
+                    Circle()
+                        .fill(themeColor.opacity(0.2))
+                        .frame(width: 80, height: 80)
+                        .overlay(
+                            Text(String(currentChild?.name.prefix(1).uppercased() ?? "C"))
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundColor(themeColor)
+                        )
+                    
+                    Text(currentChild?.name ?? "Child")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundColor(.yellow)
+                        Text("\(currentChild?.points ?? 0) points")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.top, 20)
+                
+                // Settings List
+                VStack(spacing: 0) {
+                    // Appearance Section
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text("Appearance")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Color(.systemBackground))
+                        
+                        HStack {
+                            Image(systemName: selectedTheme == .light ? "sun.max.fill" : "moon.fill")
+                                .foregroundColor(selectedTheme == .light ? .yellow : themeColor)
+                                .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                            
+                            Text("Light Mode")
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Toggle("", isOn: Binding(
+                                get: { selectedTheme == .light },
+                                set: { newValue in
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.6, blendDuration: 0.3)) {
+                                        selectedTheme = newValue ? .light : .dark
+                                        isAnimating.toggle()
+                                    }
+                                }
+                            ))
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .background(Color(.systemBackground))
+                    }
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                    
+                    // Account Section
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text("Account")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Color(.systemBackground))
+                        
+                        Button(action: {
+                            authService.signOut()
+                        }) {
+                            HStack {
+                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                    .foregroundColor(.red)
+                                Text("Sign Out")
+                                    .foregroundColor(.red)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .background(Color(.systemBackground))
+                    }
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                }
+                .padding(.horizontal, 20)
+                
+                Spacer(minLength: 100)
+            }
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+    
+    private var currentChild: Child? {
+        authService.currentChild
     }
 } 
