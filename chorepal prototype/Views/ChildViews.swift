@@ -47,12 +47,6 @@ struct ChildDashboardView: View {
                         }
                         
                         Spacer()
-                        
-                        Button(action: { dismiss() }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(.gray)
-                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
