@@ -244,6 +244,7 @@ struct AddRewardView: View {
     @State private var name = ""
     @State private var description = ""
     @State private var pointsValue = 25
+    @State private var pointsText = "25"
     @State private var selectedCategory: RewardCategory = .other
     @State private var isAvailable = true
     @State private var showingTemplates = false
@@ -286,19 +287,34 @@ struct AddRewardView: View {
                         Text("Points Required")
                         Spacer()
                         HStack(spacing: 16) {
-                            Button(action: { if pointsValue > 1 { pointsValue -= 5 } }) {
+                            Button(action: { 
+                                if pointsValue > 1 { 
+                                    pointsValue -= 5 
+                                    pointsText = "\(pointsValue)"
+                                }
+                            }) {
                                 Image(systemName: "minus.circle.fill")
                                     .foregroundColor(themeColor)
                             }
                             
-                            TextField("Points", value: $pointsValue, format: .number)
+                            TextField("Points", text: $pointsText)
                                 .keyboardType(.numberPad)
                                 .multilineTextAlignment(.center)
                                 .font(.headline)
                                 .frame(width: 60)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .onChange(of: pointsText) { newValue in
+                                    if let points = Int(newValue), points >= 1, points <= 1000 {
+                                        pointsValue = points
+                                    }
+                                }
                             
-                            Button(action: { if pointsValue < 1000 { pointsValue += 5 } }) {
+                            Button(action: { 
+                                if pointsValue < 1000 { 
+                                    pointsValue += 5 
+                                    pointsText = "\(pointsValue)"
+                                }
+                            }) {
                                 Image(systemName: "plus.circle.fill")
                                     .foregroundColor(themeColor)
                             }
@@ -415,6 +431,7 @@ struct EditRewardView: View {
     @State private var name: String
     @State private var description: String
     @State private var pointsValue: Int
+    @State private var pointsText: String
     @State private var selectedCategory: RewardCategory
     @State private var isAvailable: Bool
     
@@ -426,6 +443,7 @@ struct EditRewardView: View {
         _name = State(initialValue: reward.name)
         _description = State(initialValue: reward.description)
         _pointsValue = State(initialValue: reward.points)
+        _pointsText = State(initialValue: "\(reward.points)")
         _selectedCategory = State(initialValue: reward.category)
         _isAvailable = State(initialValue: reward.isAvailable)
     }
@@ -455,19 +473,34 @@ struct EditRewardView: View {
                         Text("Points Required")
                         Spacer()
                         HStack(spacing: 16) {
-                            Button(action: { if pointsValue > 1 { pointsValue -= 5 } }) {
+                            Button(action: { 
+                                if pointsValue > 1 { 
+                                    pointsValue -= 5 
+                                    pointsText = "\(pointsValue)"
+                                }
+                            }) {
                                 Image(systemName: "minus.circle.fill")
                                     .foregroundColor(themeColor)
                             }
                             
-                            TextField("Points", value: $pointsValue, format: .number)
+                            TextField("Points", text: $pointsText)
                                 .keyboardType(.numberPad)
                                 .multilineTextAlignment(.center)
                                 .font(.headline)
                                 .frame(width: 60)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .onChange(of: pointsText) { newValue in
+                                    if let points = Int(newValue), points >= 1, points <= 1000 {
+                                        pointsValue = points
+                                    }
+                                }
                             
-                            Button(action: { if pointsValue < 1000 { pointsValue += 5 } }) {
+                            Button(action: { 
+                                if pointsValue < 1000 { 
+                                    pointsValue += 5 
+                                    pointsText = "\(pointsValue)"
+                                }
+                            }) {
                                 Image(systemName: "plus.circle.fill")
                                     .foregroundColor(themeColor)
                             }
