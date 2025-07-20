@@ -464,7 +464,14 @@ class AuthService: ObservableObject {
             }
             
             // Create child object from Firestore data
-            let childId = UUID(uuidString: document.documentID) ?? UUID()
+            // Use the document ID as the child ID, or generate a new UUID if it's not valid
+            let childId: UUID
+            if let uuid = UUID(uuidString: document.documentID) {
+                childId = uuid
+            } else {
+                childId = UUID()
+            }
+            
             let parentId = UUID(uuidString: parentIdString) ?? UUID()
             var child = Child(id: childId, name: name, pin: childPin, parentId: parentId)
             child.points = data["points"] as? Int ?? 0
@@ -488,38 +495,51 @@ class AuthService: ObservableObject {
                 return true
             } catch {
                 print("❌ Firebase Auth sign in failed: \(error.localizedDescription)")
+                print("🔍 Error type: \(type(of: error))")
+                print("🔍 Error domain: \(error as NSError).domain")
+                print("🔍 Error code: \((error as NSError).code)")
                 
                 // Check if it's a user not found error or invalid credential
-                if let authError = error as? AuthErrorCode {
-                    print("🔍 Auth error code: \(authError.code.rawValue)")
+                let nsError = error as NSError
+                if nsError.domain == "FIRAuthErrorDomain" {
+                    print("🔍 Firebase Auth error detected")
                     
-                    if authError.code == .userNotFound || authError.code.rawValue == 17004 {
+                    if nsError.code == 17011 || nsError.code == 17004 {
                         print("👶 Creating new Firebase Auth account for child")
                         
-                        // Create child account in Firebase
-                        let result = try await auth.createUser(withEmail: childEmail, password: childPassword)
-                        print("✅ Firebase Auth account created successfully")
-                        
-                        // Store child data in Firestore (update existing document)
-                        let childData: [String: Any] = [
-                            "name": child.name,
-                            "pin": child.pin,
-                            "parentId": parentIdString,
-                            "points": child.points,
-                            "createdAt": FieldValue.serverTimestamp()
-                        ]
-                        
-                        try await db.collection("children").document(result.user.uid).setData(childData)
-                        print("✅ Child data updated in Firestore with new Firebase UID")
-                        
-                        // Firebase auth state listener will handle the rest
-                        await MainActor.run {
-                            isLoading = false
+                        do {
+                            // Create child account in Firebase
+                            let result = try await auth.createUser(withEmail: childEmail, password: childPassword)
+                            print("✅ Firebase Auth account created successfully")
+                            
+                            // Store child data in Firestore (update existing document)
+                            let childData: [String: Any] = [
+                                "name": child.name,
+                                "pin": child.pin,
+                                "parentId": parentIdString,
+                                "points": child.points,
+                                "createdAt": FieldValue.serverTimestamp()
+                            ]
+                            
+                            try await db.collection("children").document(result.user.uid).setData(childData)
+                            print("✅ Child data updated in Firestore with new Firebase UID")
+                            
+                            // Firebase auth state listener will handle the rest
+                            await MainActor.run {
+                                isLoading = false
+                            }
+                            
+                            return true
+                        } catch {
+                            print("❌ Failed to create Firebase Auth account: \(error.localizedDescription)")
+                            await MainActor.run {
+                                errorMessage = "Failed to create account: \(error.localizedDescription)"
+                                isLoading = false
+                            }
+                            return false
                         }
-                        
-                        return true
                     } else {
-                        print("❌ Unexpected auth error: \(authError.code)")
+                        print("❌ Unexpected Firebase Auth error code: \(nsError.code)")
                         await MainActor.run {
                             errorMessage = "Authentication error: \(error.localizedDescription)"
                             isLoading = false
@@ -527,7 +547,7 @@ class AuthService: ObservableObject {
                         return false
                     }
                 } else {
-                    print("❌ Non-auth error: \(error)")
+                    print("❌ Non-Firebase Auth error: \(error)")
                     await MainActor.run {
                         errorMessage = "Authentication error: \(error.localizedDescription)"
                         isLoading = false
