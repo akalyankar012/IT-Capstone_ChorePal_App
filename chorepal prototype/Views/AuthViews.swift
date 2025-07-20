@@ -289,7 +289,8 @@ struct PhoneVerificationView: View {
                         TextField("", text: $verificationCode)
                             .keyboardType(.numberPad)
                             .textContentType(.oneTimeCode)
-                            .opacity(0)
+                            .frame(height: 1)
+                            .opacity(0.01)
                             .onChange(of: verificationCode) { newValue in
                                 if newValue.count > 6 {
                                     verificationCode = String(newValue.prefix(6))
@@ -644,7 +645,8 @@ struct ChildLoginView: View {
                         // Hidden text field for input
                         TextField("", text: $pin)
                             .keyboardType(.numberPad)
-                            .opacity(0)
+                            .frame(height: 1)
+                            .opacity(0.01)
                             .onChange(of: pin) { newValue in
                                 if newValue.count > 4 {
                                     pin = String(newValue.prefix(4))
