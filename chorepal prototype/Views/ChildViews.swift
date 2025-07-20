@@ -35,14 +35,26 @@ struct ChildDashboardView: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             
-                            HStack(spacing: 8) {
-                                Image(systemName: "star.fill")
-                                    .font(.caption)
-                                    .foregroundColor(.yellow)
-                                Text("\(currentChild?.points ?? 0) points")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.secondary)
+                            VStack(spacing: 4) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "star.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.yellow)
+                                    Text("\(currentChild?.points ?? 0) available")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                HStack(spacing: 8) {
+                                    Image(systemName: "trophy.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                    Text("\(currentChild?.totalPointsEarned ?? 0) total earned")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                         }
                         
@@ -405,12 +417,31 @@ struct ChildRewardsView: View {
                         Text("\(currentChild?.points ?? 0)")
                             .font(.system(size: 32, weight: .bold))
                             .foregroundColor(.primary)
-                        Text("Points Available")
+                        Text("Available")
                             .font(.title3)
                             .foregroundColor(.gray)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                            .background(Color(.systemBackground))
+                    )
+                    
+                    HStack {
+                        Image(systemName: "trophy.fill")
+                            .font(.title2)
+                            .foregroundColor(.orange)
+                        Text("\(currentChild?.totalPointsEarned ?? 0)")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.primary)
+                        Text("Total Earned")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color(.systemGray4), lineWidth: 1)
@@ -1063,14 +1094,26 @@ struct ChildSettingsView: View {
                         .font(.title2)
                         .fontWeight(.bold)
                     
-                    HStack(spacing: 8) {
-                        Image(systemName: "star.fill")
-                            .font(.caption)
-                            .foregroundColor(.yellow)
-                        Text("\(currentChild?.points ?? 0) points")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.secondary)
+                    VStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "star.fill")
+                                .font(.caption)
+                                .foregroundColor(.yellow)
+                            Text("\(currentChild?.points ?? 0) points available")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        HStack(spacing: 8) {
+                            Image(systemName: "trophy.fill")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                            Text("\(currentChild?.totalPointsEarned ?? 0) total earned")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 .padding(.top, 20)

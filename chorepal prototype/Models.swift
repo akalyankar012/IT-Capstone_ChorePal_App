@@ -34,6 +34,7 @@ struct Child: Identifiable, Codable {
     var pin: String
     var parentId: UUID
     var points: Int = 0
+    var totalPointsEarned: Int = 0 // Track total points earned from chores
     var createdAt: Date = Date()
     
     init(name: String, pin: String, parentId: UUID) {

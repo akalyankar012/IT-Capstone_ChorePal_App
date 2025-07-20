@@ -185,7 +185,7 @@ struct FamilyOverviewCard: View {
     }
     
     private var totalFamilyPoints: Int {
-        authService.currentParent?.children.reduce(0) { $0 + $1.points } ?? 0
+        authService.currentParent?.children.reduce(0) { $0 + $1.totalPointsEarned } ?? 0
     }
     
 

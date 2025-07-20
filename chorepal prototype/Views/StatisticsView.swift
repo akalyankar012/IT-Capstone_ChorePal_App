@@ -139,7 +139,7 @@ struct FamilyOverviewStats: View {
                 
                 StatisticsCard(
                     title: "Total Points Earned",
-                    value: "\(choreService.getCompletedPoints())",
+                    value: "\(authService.currentParent?.children.reduce(0) { $0 + $1.totalPointsEarned } ?? 0)",
                     icon: "star.fill",
                     color: .yellow,
                     trend: .up
