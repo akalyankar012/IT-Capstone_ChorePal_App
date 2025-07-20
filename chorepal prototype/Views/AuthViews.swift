@@ -216,6 +216,7 @@ struct PhoneVerificationView: View {
     @State private var verificationCode = ""
     @State private var timeRemaining = 60
     @State private var canResend = false
+    @FocusState private var isVerificationCodeFocused: Bool
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -289,8 +290,9 @@ struct PhoneVerificationView: View {
                         TextField("", text: $verificationCode)
                             .keyboardType(.numberPad)
                             .textContentType(.oneTimeCode)
-                            .frame(height: 1)
-                            .opacity(0.01)
+                            .frame(width: 1, height: 1)
+                            .opacity(0.001)
+                            .focused($isVerificationCodeFocused)
                             .onChange(of: verificationCode) { newValue in
                                 if newValue.count > 6 {
                                     verificationCode = String(newValue.prefix(6))
@@ -341,6 +343,9 @@ struct PhoneVerificationView: View {
         .navigationBarHidden(true)
         .onAppear {
             startTimer()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isVerificationCodeFocused = true
+            }
         }
     }
     
@@ -576,6 +581,7 @@ struct ChildLoginView: View {
     @ObservedObject var authService: AuthService
     @Binding var selectedRole: UserRole
     @State private var pin = ""
+    @FocusState private var isPinFocused: Bool
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -645,8 +651,9 @@ struct ChildLoginView: View {
                         // Hidden text field for input
                         TextField("", text: $pin)
                             .keyboardType(.numberPad)
-                            .frame(height: 1)
-                            .opacity(0.01)
+                            .frame(width: 1, height: 1)
+                            .opacity(0.001)
+                            .focused($isPinFocused)
                             .onChange(of: pin) { newValue in
                                 if newValue.count > 4 {
                                     pin = String(newValue.prefix(4))
@@ -673,6 +680,11 @@ struct ChildLoginView: View {
             }
         }
         .navigationBarHidden(true)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isPinFocused = true
+            }
+        }
     }
     
     private func signIn() async {
