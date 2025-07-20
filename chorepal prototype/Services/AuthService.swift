@@ -12,6 +12,29 @@ class AuthService: ObservableObject {
     private var parents: [Parent] = []
     private var children: [Child] = []
     
+    init() {
+        // Add sample data for testing
+        setupSampleData()
+    }
+    
+    private func setupSampleData() {
+        // Add a sample parent
+        var sampleParent = Parent(phoneNumber: "5551234567", password: "password123")
+        sampleParent.isVerified = true
+        parents.append(sampleParent)
+        
+        // Add sample children with known PINs
+        let sampleChild1 = Child(name: "Emma", pin: "1234", parentId: sampleParent.id)
+        let sampleChild2 = Child(name: "Liam", pin: "5678", parentId: sampleParent.id)
+        
+        children.append(sampleChild1)
+        children.append(sampleChild2)
+        
+        // Add children to parent
+        sampleParent.children.append(sampleChild1)
+        sampleParent.children.append(sampleChild2)
+    }
+    
     // MARK: - Parent Authentication
     
     func signUpParent(phoneNumber: String, password: String) async -> Bool {
