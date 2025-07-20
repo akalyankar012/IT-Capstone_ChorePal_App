@@ -189,22 +189,37 @@ class AuthService: ObservableObject {
             do {
                 try await auth.signIn(withEmail: email, password: password)
             } catch {
-                // If user doesn't exist, create the account
-                if let authError = error as? AuthErrorCode, authError.code == .userNotFound {
-                    print("User not found, creating new account...")
-                    let result = try await auth.createUser(withEmail: email, password: password)
+                print("Sign in failed, checking error type...")
+                print("Error: \(error)")
+                
+                // Check if user doesn't exist (try to create account)
+                if let authError = error as? AuthErrorCode {
+                    print("Auth error code: \(authError.code.rawValue)")
                     
-                    // Store parent data in Firestore
-                    let parentData: [String: Any] = [
-                        "phoneNumber": cleanPhoneNumber,
-                        "isVerified": true,
-                        "createdAt": FieldValue.serverTimestamp()
-                    ]
-                    
-                    try await db.collection("parents").document(result.user.uid).setData(parentData)
-                    print("New parent account created successfully")
+                    if authError.code == .userNotFound {
+                        print("User not found, creating new account...")
+                        do {
+                            let result = try await auth.createUser(withEmail: email, password: password)
+                            
+                            // Store parent data in Firestore
+                            let parentData: [String: Any] = [
+                                "phoneNumber": cleanPhoneNumber,
+                                "isVerified": true,
+                                "createdAt": FieldValue.serverTimestamp()
+                            ]
+                            
+                            try await db.collection("parents").document(result.user.uid).setData(parentData)
+                            print("New parent account created successfully")
+                        } catch {
+                            print("Failed to create account: \(error)")
+                            throw error
+                        }
+                    } else {
+                        // Re-throw other auth errors
+                        throw error
+                    }
                 } else {
-                    // Re-throw other errors
+                    // Re-throw non-auth errors
                     throw error
                 }
             }
