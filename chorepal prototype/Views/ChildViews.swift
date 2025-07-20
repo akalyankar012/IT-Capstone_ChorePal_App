@@ -1087,7 +1087,7 @@ struct ChildSettingsView: View {
                                 .foregroundColor(selectedTheme == .light ? .yellow : themeColor)
                                 .rotationEffect(.degrees(isAnimating ? 360 : 0))
                             
-                            Text("Light Mode")
+                            Text(selectedTheme == .light ? "Light Mode" : "Dark Mode")
                                 .foregroundColor(.primary)
                             
                             Spacer()
