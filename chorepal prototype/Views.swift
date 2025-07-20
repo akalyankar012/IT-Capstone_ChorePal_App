@@ -20,6 +20,7 @@ struct ContentView: View {
     @StateObject private var achievementManager = AchievementManager()
     @StateObject private var authService = AuthService()
     @StateObject private var choreService = ChoreService()
+    @StateObject private var rewardService = RewardService()
     @State private var chores = Chore.sampleChores
     
     var body: some View {
@@ -36,6 +37,13 @@ struct ContentView: View {
                 } else if selectedRole == .parent && authService.authState == .authenticated {
                     // Show Parent Dashboard for authenticated parents
                     ParentDashboardView(authService: authService)
+                } else if selectedRole == .child && authService.authState == .authenticated {
+                    // Show Child Dashboard for authenticated children
+                    ChildDashboardView(
+                        authService: authService,
+                        choreService: choreService,
+                        rewardService: rewardService
+                    )
                 } else {
                     TabView(selection: $selectedTab) {
                         NavigationView {

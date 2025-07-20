@@ -58,6 +58,16 @@ class RewardService: ObservableObject {
         return true
     }
     
+    func redeemReward(_ reward: Reward, byChild child: Child) {
+        guard reward.isAvailable else { return }
+        
+        // Mark reward as purchased
+        if let index = rewards.firstIndex(where: { $0.id == reward.id }) {
+            rewards[index].purchasedAt = Date()
+            rewards[index].purchasedByChildId = child.id
+        }
+    }
+    
     // MARK: - Queries
     
     func getAvailableRewards() -> [Reward] {

@@ -143,6 +143,57 @@ class AuthService: ObservableObject {
         currentParent?.children.removeAll { $0.id == child.id }
     }
     
+    // MARK: - Child Points Management
+    
+    func awardPointsToChild(childId: UUID, points: Int) {
+        if let childIndex = children.firstIndex(where: { $0.id == childId }) {
+            children[childIndex].points += points
+        }
+        
+        if let childIndex = currentParent?.children.firstIndex(where: { $0.id == childId }) {
+            currentParent?.children[childIndex].points += points
+        }
+        
+        // Update current child if it's the same child
+        if currentChild?.id == childId {
+            currentChild?.points += points
+        }
+    }
+    
+    func deductPointsFromChild(childId: UUID, points: Int) {
+        if let childIndex = children.firstIndex(where: { $0.id == childId }) {
+            children[childIndex].points = max(0, children[childIndex].points - points)
+        }
+        
+        if let childIndex = currentParent?.children.firstIndex(where: { $0.id == childId }) {
+            currentParent?.children[childIndex].points = max(0, (currentParent?.children[childIndex].points ?? 0) - points)
+        }
+        
+        // Update current child if it's the same child
+        if currentChild?.id == childId {
+            currentChild?.points = max(0, (currentChild?.points ?? 0) - points)
+        }
+    }
+    
+    func updateChildPoints(childId: UUID, points: Int) {
+        if let childIndex = children.firstIndex(where: { $0.id == childId }) {
+            children[childIndex].points = points
+        }
+        
+        if let childIndex = currentParent?.children.firstIndex(where: { $0.id == childId }) {
+            currentParent?.children[childIndex].points = points
+        }
+        
+        // Update current child if it's the same child
+        if currentChild?.id == childId {
+            currentChild?.points = points
+        }
+    }
+    
+    func getChildrenForCurrentParent() -> [Child] {
+        return currentParent?.children ?? []
+    }
+    
     func addChild(name: String) async -> String {
         await MainActor.run {
             isLoading = true
@@ -213,18 +264,4 @@ class AuthService: ObservableObject {
     }
     
     // MARK: - Helper Methods
-    
-    func getChildrenForCurrentParent() -> [Child] {
-        guard let parent = currentParent else { return [] }
-        return children.filter { $0.parentId == parent.id }
-    }
-    
-    func updateChildPoints(childId: UUID, points: Int) {
-        if let index = children.firstIndex(where: { $0.id == childId }) {
-            children[index].points = points
-        }
-        if let index = currentParent?.children.firstIndex(where: { $0.id == childId }) {
-            currentParent?.children[index].points = points
-        }
-    }
 } 

@@ -625,12 +625,10 @@ struct RecentActivitySection: View {
         for chore in choreService.getCompletedChores() {
             activities.append(ActivityItem(
                 id: UUID(),
-                type: .choreCompleted,
                 title: "\(chore.title) completed",
-                subtitle: "+\(chore.points) points",
-                timestamp: Date(),
-                icon: "checkmark.circle.fill",
-                color: .green
+                description: "+\(chore.points) points",
+                date: Date(),
+                type: .chore
             ))
         }
         
@@ -638,17 +636,15 @@ struct RecentActivitySection: View {
         for reward in rewardService.getPurchasedRewards() {
             activities.append(ActivityItem(
                 id: UUID(),
-                type: .rewardPurchased,
                 title: "\(reward.name) purchased",
-                subtitle: "-\(reward.points) points",
-                timestamp: Date(),
-                icon: "gift.fill",
-                color: .purple
+                description: "-\(reward.points) points",
+                date: Date(),
+                type: .reward
             ))
         }
         
-        // Sort by timestamp and return recent ones
-        return activities.sorted { $0.timestamp > $1.timestamp }
+        // Sort by date and return recent ones
+        return activities.sorted { $0.date > $1.date }
     }
 }
 
@@ -656,31 +652,39 @@ struct RecentActivitySection: View {
 struct ActivityRow: View {
     let activity: ActivityItem
     
+    private let themeColor = Color(hex: "#a2cee3")
+    
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: activity.icon)
-                .font(.title3)
-                .foregroundColor(activity.color)
-                .frame(width: 24)
+            Circle()
+                .fill(themeColor.opacity(0.2))
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Image(systemName: activity.type.icon)
+                        .font(.title3)
+                        .foregroundColor(themeColor)
+                )
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(activity.title)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
                 
-                Text(activity.subtitle)
+                Text(activity.description)
                     .font(.caption)
                     .foregroundColor(.gray)
             }
             
             Spacer()
             
-            Text(activity.timestamp, style: .relative)
+            Text(activity.date, style: .relative)
                 .font(.caption)
                 .foregroundColor(.gray)
         }
-        .padding(.vertical, 4)
+        .padding(12)
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
     }
 }
 
@@ -717,20 +721,7 @@ enum TrendDirection {
     }
 }
 
-struct ActivityItem {
-    let id: UUID
-    let type: ActivityType
-    let title: String
-    let subtitle: String
-    let timestamp: Date
-    let icon: String
-    let color: Color
-}
 
-enum ActivityType {
-    case choreCompleted
-    case rewardPurchased
-}
 
 // MARK: - Child Statistics View
 struct ChildStatisticsView: View {
