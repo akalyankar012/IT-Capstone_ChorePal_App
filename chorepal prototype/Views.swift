@@ -32,6 +32,9 @@ struct ContentView: View {
                     authenticationView
                 } else if selectedRole == .none {
                     RoleSelectionView(selectedRole: $selectedRole, selectedTheme: $selectedTheme, authService: authService)
+                } else if selectedRole == .parent && authService.authState == .authenticated {
+                    // Show Parent Dashboard for authenticated parents
+                    ParentDashboardView(authService: authService)
                 } else {
                     TabView(selection: $selectedTab) {
                         NavigationView {

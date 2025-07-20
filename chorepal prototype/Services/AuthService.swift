@@ -133,6 +133,16 @@ class AuthService: ObservableObject {
     
     // MARK: - Child Management
     
+    func addChild(_ child: Child) {
+        children.append(child)
+        currentParent?.children.append(child)
+    }
+    
+    func removeChild(_ child: Child) {
+        children.removeAll { $0.id == child.id }
+        currentParent?.children.removeAll { $0.id == child.id }
+    }
+    
     func addChild(name: String) async -> String {
         await MainActor.run {
             isLoading = true
