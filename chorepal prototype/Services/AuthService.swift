@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import Firebase
 import FirebaseAuth
+import FirebaseFirestore
 
 class AuthService: ObservableObject {
     @Published var currentParent: Parent?
@@ -62,8 +63,13 @@ class AuthService: ObservableObject {
         }
         
         do {
+            // Clean phone number (remove any formatting)
+            let cleanPhoneNumber = phoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+            
             // Create email from phone number for Firebase Auth
-            let email = "\(phoneNumber)@parent.chorepal.com"
+            let email = "\(cleanPhoneNumber)@parent.chorepal.com"
+            
+            print("Creating Firebase account with email: \(email)")
             
             // Create user with Firebase Auth
             let result = try await auth.createUser(withEmail: email, password: password)
@@ -86,7 +92,24 @@ class AuthService: ObservableObject {
             return true
         } catch {
             await MainActor.run {
-                errorMessage = error.localizedDescription
+                // More detailed error handling for sign up
+                if let authError = error as? AuthErrorCode {
+                    switch authError.code {
+                    case .emailAlreadyInUse:
+                        errorMessage = "This phone number is already registered. Please sign in instead."
+                    case .weakPassword:
+                        errorMessage = "Password is too weak. Please choose a stronger password."
+                    case .invalidEmail:
+                        errorMessage = "Invalid phone number format."
+                    case .networkError:
+                        errorMessage = "Network error. Please check your connection."
+                    default:
+                        errorMessage = "Authentication error: \(authError.localizedDescription)"
+                    }
+                } else {
+                    errorMessage = "Error: \(error.localizedDescription)"
+                }
+                print("Firebase Auth Error (Sign Up): \(error)")
                 isLoading = false
             }
             return false
@@ -127,8 +150,13 @@ class AuthService: ObservableObject {
         }
         
         do {
+            // Clean phone number (remove any formatting)
+            let cleanPhoneNumber = phoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+            
             // Create email from phone number for Firebase Auth
-            let email = "\(phoneNumber)@parent.chorepal.com"
+            let email = "\(cleanPhoneNumber)@parent.chorepal.com"
+            
+            print("Signing in with email: \(email)")
             
             // Sign in with Firebase Auth
             try await auth.signIn(withEmail: email, password: password)
@@ -141,7 +169,24 @@ class AuthService: ObservableObject {
             return true
         } catch {
             await MainActor.run {
-                errorMessage = error.localizedDescription
+                // More detailed error handling for sign in
+                if let authError = error as? AuthErrorCode {
+                    switch authError.code {
+                    case .userNotFound:
+                        errorMessage = "No account found with this phone number. Please sign up first."
+                    case .wrongPassword:
+                        errorMessage = "Incorrect password. Please try again."
+                    case .invalidEmail:
+                        errorMessage = "Invalid phone number format."
+                    case .networkError:
+                        errorMessage = "Network error. Please check your connection."
+                    default:
+                        errorMessage = "Authentication error: \(authError.localizedDescription)"
+                    }
+                } else {
+                    errorMessage = "Error: \(error.localizedDescription)"
+                }
+                print("Firebase Auth Error (Sign In): \(error)")
                 isLoading = false
             }
             return false
