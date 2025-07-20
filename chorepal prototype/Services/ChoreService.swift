@@ -61,6 +61,17 @@ class ChoreService: ObservableObject {
         return chores.filter { $0.assignedToChildId == nil }
     }
     
+    func getChoresForParent(childrenIds: [UUID]) -> [Chore] {
+        return chores.filter { chore in
+            // Show chores assigned to any of the parent's children
+            if let assignedChildId = chore.assignedToChildId {
+                return childrenIds.contains(assignedChildId)
+            }
+            // Also show unassigned chores so parent can assign them
+            return true
+        }
+    }
+    
     func getCompletedChores() -> [Chore] {
         return chores.filter { $0.isCompleted }
     }

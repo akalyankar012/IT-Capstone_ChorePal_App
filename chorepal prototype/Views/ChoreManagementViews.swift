@@ -4,6 +4,7 @@ import SwiftUI
 struct ChoreManagementView: View {
     @ObservedObject var choreService: ChoreService
     @ObservedObject var authService: AuthService
+    @Environment(\.dismiss) private var dismiss
     @State private var showingAddChore = false
     @State private var selectedChore: Chore?
     @State private var showingEditChore = false
@@ -66,7 +67,13 @@ struct ChoreManagementView: View {
             .navigationTitle("Manage Chores")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(themeColor)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddChore = true }) {
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 24))
@@ -84,12 +91,39 @@ struct ChoreManagementView: View {
     }
     
     private var filteredChores: [Chore] {
-        let statusFiltered = choreService.filterChores(by: selectedStatus)
+        // Get children IDs for the current parent
+        let childrenIds = authService.currentParent?.children.map { $0.id } ?? []
+        
+        // Get chores for this parent (assigned to their children + unassigned)
+        let parentChores = choreService.getChoresForParent(childrenIds: childrenIds)
+        
+        // Apply status filter
+        let statusFiltered = parentChores.filter { chore in
+            switch selectedStatus {
+            case .all:
+                return true
+            case .active:
+                return !chore.isCompleted
+            case .completed:
+                return chore.isCompleted
+            case .overdue:
+                return !chore.isCompleted && chore.dueDate < Date()
+            case .dueToday:
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: Date())
+                let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
+                let choreDate = calendar.startOfDay(for: chore.dueDate)
+                return choreDate >= today && choreDate < tomorrow
+            }
+        }
+        
+        // Apply search filter
         if searchText.isEmpty {
             return statusFiltered
         } else {
-            return choreService.searchChores(query: searchText).filter { chore in
-                statusFiltered.contains { $0.id == chore.id }
+            return statusFiltered.filter { chore in
+                chore.title.localizedCaseInsensitiveContains(searchText) ||
+                chore.description.localizedCaseInsensitiveContains(searchText)
             }
         }
     }
