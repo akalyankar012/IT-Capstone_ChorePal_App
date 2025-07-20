@@ -478,12 +478,13 @@ class AuthService: ObservableObject {
             
             // Create Firebase account for child if it doesn't exist
             let childEmail = "\(child.id.uuidString)@child.chorepal.com"
-            let childPassword = pin // Use PIN as password for simplicity
+            // Pad PIN to meet Firebase's minimum 6-character password requirement
+            let childPassword = "\(pin)00" // Add "00" to make it 6 characters
             
             print("🔐 Attempting Firebase Auth with email: \(childEmail)")
             
             do {
-                // Try to sign in with Firebase
+                // Try to sign in with Firebase (using padded password)
                 try await auth.signIn(withEmail: childEmail, password: childPassword)
                 print("✅ Firebase Auth sign in successful")
                 
