@@ -781,7 +781,7 @@ struct ParentOverviewView: View {
             AddChildView(authService: authService)
         }
         .fullScreenCover(item: $selectedChild) { child in
-            ChildDetailsView(child: child, authService: authService)
+            ChildDetailsView(child: child, authService: authService, choreService: choreService)
         }
     }
 }

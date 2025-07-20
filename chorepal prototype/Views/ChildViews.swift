@@ -152,36 +152,7 @@ struct ChildDashboardView: View {
     }
 }
 
-// MARK: - Tab Button
-struct TabButton: View {
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    private let themeColor = Color(hex: "#a2cee3")
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundColor(isSelected ? themeColor : .gray)
-                
-                Text(title)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(isSelected ? themeColor : .gray)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? themeColor.opacity(0.1) : Color.clear)
-            )
-        }
-    }
-}
+
 
 // MARK: - Child Chores View
 struct ChildChoresView: View {
