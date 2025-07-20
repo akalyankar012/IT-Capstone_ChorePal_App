@@ -312,11 +312,11 @@ struct QuickActionsSection: View {
                 }
                 
                 QuickActionCard(
-                    title: "Add Chore",
-                    icon: "plus.circle.fill",
+                    title: "View Children",
+                    icon: "person.2.fill",
                     color: .blue
                 ) {
-                    // Will be implemented with direct add chore
+                    // Will be implemented to show children overview
                 }
                 
                 QuickActionCard(
