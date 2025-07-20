@@ -286,6 +286,7 @@ struct QuickActionsSection: View {
     @StateObject private var rewardService = RewardService()
     @State private var showingChoreManagement = false
     @State private var showingRewardManagement = false
+    @State private var showingStatistics = false
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -328,7 +329,7 @@ struct QuickActionsSection: View {
                     icon: "chart.bar.fill",
                     color: .orange
                 ) {
-                    // Will be implemented when we add statistics
+                    showingStatistics = true
                 }
             }
         }
@@ -341,6 +342,13 @@ struct QuickActionsSection: View {
         }
         .fullScreenCover(isPresented: $showingRewardManagement) {
             ManageRewardsView(rewardService: rewardService, authService: authService)
+        }
+        .fullScreenCover(isPresented: $showingStatistics) {
+            StatisticsView(
+                choreService: choreService,
+                rewardService: rewardService,
+                authService: authService
+            )
         }
     }
 }
