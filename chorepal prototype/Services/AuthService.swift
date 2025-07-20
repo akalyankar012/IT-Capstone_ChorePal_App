@@ -316,7 +316,9 @@ class AuthService: ObservableObject {
             
             // Save child to Firestore
             try await db.collection("children").document(child.id.uuidString).setData(childData)
-            print("Child saved to Firestore successfully: \(child.name)")
+            print("✅ Child saved to Firestore successfully: \(child.name) with PIN: \(child.pin)")
+            print("📝 Child document ID: \(child.id.uuidString)")
+            print("📝 Child data saved: \(childData)")
             
             // Update parent document to include child reference
             try await db.collection("parents").document(currentUser.uid).updateData([
@@ -396,6 +398,7 @@ class AuthService: ObservableObject {
         
         // Generate 4-digit PIN
         let pin = String(format: "%04d", Int.random(in: 1000...9999))
+        print("🎲 Generated PIN for new child: \(pin)")
         
         guard let parent = currentParent else {
             await MainActor.run {
@@ -427,13 +430,18 @@ class AuthService: ObservableObject {
             errorMessage = nil
         }
         
+        print("🔍 Searching for child with PIN: \(pin)")
+        
         do {
             // Search for child in Firestore by PIN
             let snapshot = try await db.collection("children")
                 .whereField("pin", isEqualTo: pin)
                 .getDocuments()
             
+            print("📊 Found \(snapshot.documents.count) children with PIN: \(pin)")
+            
             guard let document = snapshot.documents.first else {
+                print("❌ No child found with PIN: \(pin)")
                 await MainActor.run {
                     errorMessage = "Invalid PIN - no child found"
                     isLoading = false
@@ -442,9 +450,12 @@ class AuthService: ObservableObject {
             }
             
             let data = document.data()
+            print("📄 Child document data: \(data)")
+            
             guard let name = data["name"] as? String,
                   let childPin = data["pin"] as? String,
                   let parentIdString = data["parentId"] as? String else {
+                print("❌ Invalid child data structure")
                 await MainActor.run {
                     errorMessage = "Invalid child data"
                     isLoading = false
