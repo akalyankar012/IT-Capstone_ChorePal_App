@@ -245,11 +245,14 @@ struct ChildChoresView: View {
     }
     
     private func completeChore(_ chore: Chore) {
+        // Check if chore is being marked as completed (not uncompleted)
+        let wasCompleted = chore.isCompleted
         choreService.toggleChoreCompletion(chore)
         
-        // Award points to child
-        if let child = currentChild {
+        // Only award points if the chore was NOT completed before (i.e., we're completing it now)
+        if !wasCompleted, let child = currentChild {
             authService.awardPointsToChild(childId: child.id, points: chore.points)
+            print("✅ Awarded \(chore.points) points to \(child.name) for completing '\(chore.title)'")
         }
     }
 }
