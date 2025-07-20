@@ -772,9 +772,21 @@ class AuthService: ObservableObject {
     
     private func loadChildFromDocument(_ document: DocumentSnapshot) {
         let data = document.data() ?? [:]
+        print("🔍 Loading child from document with data: \(data)")
+        
+        // Handle both string and integer PIN values
+        let pin: String
+        if let pinString = data["pin"] as? String {
+            pin = pinString
+        } else if let pinNumber = data["pin"] as? Int {
+            pin = String(pinNumber)
+        } else {
+            print("❌ PIN field not found or invalid type")
+            createMockChild(userId: document.documentID)
+            return
+        }
         
         if let name = data["name"] as? String,
-           let pin = data["pin"] as? String,
            let parentIdString = data["parentId"] as? String,
            let parentId = UUID(uuidString: parentIdString) {
             
@@ -789,7 +801,9 @@ class AuthService: ObservableObject {
             print("🔧 Auth state updated: \(String(describing: authState))")
             print("🔧 Current child set: \(currentChild?.name ?? "nil")")
         } else {
-            print("❌ Invalid child data structure")
+            print("❌ Invalid child data structure - missing required fields")
+            print("🔍 Name: \(data["name"] ?? "nil")")
+            print("🔍 ParentId: \(data["parentId"] ?? "nil")")
             createMockChild(userId: document.documentID)
         }
     }
