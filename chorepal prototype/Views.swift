@@ -95,7 +95,7 @@ struct ContentView: View {
     private var authenticationView: some View {
         if selectedRole == .child && authService.authState == .none {
             // Show child login directly
-            ChildLoginView(authService: authService)
+            ChildLoginView(authService: authService, selectedRole: $selectedRole)
         } else {
             switch authService.authState {
             case .none:

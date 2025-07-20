@@ -573,6 +573,7 @@ struct ParentSignInView: View {
 // MARK: - Child Login View
 struct ChildLoginView: View {
     @ObservedObject var authService: AuthService
+    @Binding var selectedRole: UserRole
     @State private var pin = ""
     
     private let themeColor = Color(hex: "#a2cee3")
@@ -587,6 +588,7 @@ struct ChildLoginView: View {
                     // Back Button
                     HStack {
                         Button(action: {
+                            selectedRole = .none
                             authService.authState = .none
                         }) {
                             HStack {
