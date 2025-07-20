@@ -770,19 +770,36 @@ struct ParentOverviewView: View {
                 )
                 
                 // Quick Actions Section
-                QuickActionsSection(choreService: choreService, authService: authService)
+                if authService.currentParent != nil {
+                    QuickActionsSection(choreService: choreService, authService: authService)
+                } else {
+                    // Show loading or error state
+                    VStack(spacing: 16) {
+                        HStack {
+                            Image(systemName: "bolt.fill")
+                                .font(.title2)
+                                .foregroundColor(themeColor)
+                            Text("Quick Actions")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        
+                        Text("Loading parent data...")
+                            .foregroundColor(.gray)
+                            .padding()
+                    }
+                    .padding(20)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(16)
+                    .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                }
                 
                 Spacer(minLength: 100)
             }
             .padding(.horizontal, 20)
         }
         .background(Color(.systemGroupedBackground))
-        .fullScreenCover(isPresented: $showingAddChild) {
-            AddChildView(authService: authService)
-        }
-        .fullScreenCover(item: $selectedChild) { child in
-            ChildDetailsView(child: child, authService: authService, choreService: choreService)
-        }
     }
 }
 

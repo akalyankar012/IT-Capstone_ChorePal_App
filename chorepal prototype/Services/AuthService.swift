@@ -392,10 +392,19 @@ class AuthService: ObservableObject {
     }
     
     private func loadParentData(userId: String) {
+        print("Loading parent data for userId: \(userId)")
         // Load parent data from Firestore
         db.collection("parents").document(userId).getDocument { [weak self] document, error in
             DispatchQueue.main.async {
+                if let error = error {
+                    print("Error loading parent data: \(error)")
+                    // Fallback to mock data
+                    self?.createMockParent(userId: userId)
+                    return
+                }
+                
                 if let document = document, document.exists {
+                    print("Parent document exists, loading data...")
                     // Parent data exists, load it from Firestore
                     if let data = document.data(),
                        let phoneNumber = data["phoneNumber"] as? String {
@@ -404,11 +413,14 @@ class AuthService: ObservableObject {
                         parent.isVerified = data["isVerified"] as? Bool ?? false
                         self?.currentParent = parent
                         self?.authState = .authenticated
+                        print("Parent data loaded successfully: \(parent.phoneNumber)")
                     } else {
+                        print("Parent document exists but data is invalid, using mock data")
                         // Fallback to mock data
                         self?.createMockParent(userId: userId)
                     }
                 } else {
+                    print("Parent document doesn't exist, creating mock parent")
                     // New parent, create profile with mock data for now
                     self?.createMockParent(userId: userId)
                 }
@@ -417,6 +429,7 @@ class AuthService: ObservableObject {
     }
     
     private func createMockParent(userId: String) {
+        print("Creating mock parent for userId: \(userId)")
         // Create a mock parent for testing
         let parentId = UUID(uuidString: userId) ?? UUID()
         var parent = Parent(id: parentId, phoneNumber: "5551234567", password: "password123")
@@ -432,6 +445,7 @@ class AuthService: ObservableObject {
         
         currentParent = parent
         authState = .authenticated
+        print("Mock parent created successfully with \(parent.children.count) children")
     }
     
     private func loadChildData(userId: String) {
