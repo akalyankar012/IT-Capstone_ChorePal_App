@@ -210,3 +210,4 @@ class AchievementManager: ObservableObject {
         rewardHistory.append(reward)
     }
 } 
+ 

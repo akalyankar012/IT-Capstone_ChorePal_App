@@ -55,6 +55,7 @@ struct ChildDashboardView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                 }
+                .padding(.bottom, 16)
                 
                 // Tab Selector
                 HStack(spacing: 0) {
