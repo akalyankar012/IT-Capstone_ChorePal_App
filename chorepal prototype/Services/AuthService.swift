@@ -4,6 +4,11 @@ import Firebase
 import FirebaseAuth
 import FirebaseFirestore
 
+// MARK: - Notification Names
+extension Notification.Name {
+    static let childPointsUpdated = Notification.Name("childPointsUpdated")
+}
+
 class AuthService: ObservableObject {
     @Published var currentParent: Parent?
     @Published var currentChild: Child?
@@ -443,9 +448,18 @@ class AuthService: ObservableObject {
             ])
             print("✅ Child points updated in Firestore: \(childId) -> \(points) points")
             
+            // Post notification to refresh parent dashboard
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .childPointsUpdated, object: nil)
+            }
+            
         } catch {
             print("❌ Error updating child points in Firestore: \(error)")
         }
+    }
+    
+    func refreshChildrenData(parentId: UUID) {
+        loadChildrenForParent(parentId: parentId)
     }
     
     func addChild(name: String) async -> String {

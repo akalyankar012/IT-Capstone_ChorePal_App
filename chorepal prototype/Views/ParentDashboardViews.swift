@@ -118,6 +118,12 @@ struct ParentDashboardView: View {
                 await choreService.loadChoresFromFirestore()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .childPointsUpdated)) { _ in
+            // Refresh children data when points are updated
+            if let parentId = authService.currentParent?.id {
+                authService.refreshChildrenData(parentId: parentId)
+            }
+        }
     }
 }
 
