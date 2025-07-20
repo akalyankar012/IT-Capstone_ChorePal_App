@@ -270,7 +270,7 @@ class AuthService: ObservableObject {
         
         guard let parent = currentParent else {
             await MainActor.run {
-                errorMessage = "No parent logged in"
+                errorMessage = "Parent not found"
                 isLoading = false
             }
             return ""
@@ -352,15 +352,42 @@ class AuthService: ObservableObject {
         db.collection("parents").document(userId).getDocument { [weak self] document, error in
             DispatchQueue.main.async {
                 if let document = document, document.exists {
-                    // Parent data exists, load it
-                    // For now, we'll use mock data until we set up Firestore
-                    self?.authState = .authenticated
+                    // Parent data exists, load it from Firestore
+                    if let data = document.data(),
+                       let phoneNumber = data["phoneNumber"] as? String {
+                        let parentId = UUID(uuidString: userId) ?? UUID()
+                        var parent = Parent(id: parentId, phoneNumber: phoneNumber, password: "")
+                        parent.isVerified = data["isVerified"] as? Bool ?? false
+                        self?.currentParent = parent
+                        self?.authState = .authenticated
+                    } else {
+                        // Fallback to mock data
+                        self?.createMockParent(userId: userId)
+                    }
                 } else {
-                    // New parent, create profile
-                    self?.authState = .authenticated
+                    // New parent, create profile with mock data for now
+                    self?.createMockParent(userId: userId)
                 }
             }
         }
+    }
+    
+    private func createMockParent(userId: String) {
+        // Create a mock parent for testing
+        let parentId = UUID(uuidString: userId) ?? UUID()
+        var parent = Parent(id: parentId, phoneNumber: "5551234567", password: "password123")
+        parent.isVerified = true
+        
+        // Add sample children
+        let sampleChild1 = Child(name: "Emma", pin: "1234", parentId: parent.id)
+        let sampleChild2 = Child(name: "Liam", pin: "5678", parentId: parent.id)
+        parent.children = [sampleChild1, sampleChild2]
+        
+        // Update local arrays
+        children = [sampleChild1, sampleChild2]
+        
+        currentParent = parent
+        authState = .authenticated
     }
     
     private func loadChildData(userId: String) {

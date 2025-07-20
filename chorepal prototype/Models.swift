@@ -8,21 +8,47 @@ enum UserRole {
 
 // MARK: - Authentication Models
 struct Parent: Identifiable, Codable {
-    let id = UUID()
+    var id: UUID
     var phoneNumber: String
     var password: String
     var isVerified: Bool = false
     var children: [Child] = []
     var createdAt: Date = Date()
+    
+    init(phoneNumber: String, password: String) {
+        self.id = UUID()
+        self.phoneNumber = phoneNumber
+        self.password = password
+    }
+    
+    init(id: UUID, phoneNumber: String, password: String) {
+        self.id = id
+        self.phoneNumber = phoneNumber
+        self.password = password
+    }
 }
 
 struct Child: Identifiable, Codable {
-    let id = UUID()
+    var id: UUID
     var name: String
     var pin: String
     var parentId: UUID
     var points: Int = 0
     var createdAt: Date = Date()
+    
+    init(name: String, pin: String, parentId: UUID) {
+        self.id = UUID()
+        self.name = name
+        self.pin = pin
+        self.parentId = parentId
+    }
+    
+    init(id: UUID, name: String, pin: String, parentId: UUID) {
+        self.id = id
+        self.name = name
+        self.pin = pin
+        self.parentId = parentId
+    }
 }
 
 enum AuthState {
@@ -83,7 +109,7 @@ enum RewardStatus: String, CaseIterable {
 
 // MARK: - Existing Models
 struct Chore: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     var title: String
     var description: String
     var points: Int
@@ -122,7 +148,7 @@ struct Chore: Identifiable, Codable {
 }
 
 struct Reward: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     var name: String
     var description: String
     var points: Int
@@ -156,7 +182,7 @@ struct Reward: Identifiable, Codable {
 }
 
 struct CompletedChore: Identifiable {
-    let id = UUID()
+    var id = UUID()
     let choreId: UUID
     let title: String
     let points: Int
@@ -164,7 +190,7 @@ struct CompletedChore: Identifiable {
 }
 
 struct RewardHistory: Identifiable {
-    let id = UUID()
+    var id = UUID()
     let name: String
     let points: Int
     let purchasedAt: Date
