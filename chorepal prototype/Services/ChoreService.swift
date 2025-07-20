@@ -1,10 +1,14 @@
 import Foundation
 import Combine
+import Firebase
+import FirebaseFirestore
 
 class ChoreService: ObservableObject {
     @Published var chores: [Chore] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    
+    private let db = Firestore.firestore()
     
     init() {
         // Load sample data for testing
@@ -19,21 +23,107 @@ class ChoreService: ObservableObject {
     
     func addChore(_ chore: Chore) {
         chores.append(chore)
+        
+        // Save to Firestore
+        Task {
+            await saveChoreToFirestore(chore)
+        }
+    }
+    
+    private func saveChoreToFirestore(_ chore: Chore) async {
+        do {
+            let choreData: [String: Any] = [
+                "title": chore.title,
+                "description": chore.description,
+                "points": chore.points,
+                "dueDate": chore.dueDate,
+                "isCompleted": chore.isCompleted,
+                "isRequired": chore.isRequired,
+                "assignedToChildId": chore.assignedToChildId?.uuidString,
+                "createdAt": chore.createdAt,
+                "updatedAt": FieldValue.serverTimestamp()
+            ]
+            
+            try await db.collection("chores").document(chore.id.uuidString).setData(choreData)
+            print("✅ Chore saved to Firestore: \(chore.title)")
+            
+        } catch {
+            print("❌ Error saving chore to Firestore: \(error)")
+        }
     }
     
     func updateChore(_ chore: Chore) {
         if let index = chores.firstIndex(where: { $0.id == chore.id }) {
             chores[index] = chore
+            
+            // Update in Firestore
+            Task {
+                await updateChoreInFirestore(chore)
+            }
+        }
+    }
+    
+    private func updateChoreInFirestore(_ chore: Chore) async {
+        do {
+            let choreData: [String: Any] = [
+                "title": chore.title,
+                "description": chore.description,
+                "points": chore.points,
+                "dueDate": chore.dueDate,
+                "isCompleted": chore.isCompleted,
+                "isRequired": chore.isRequired,
+                "assignedToChildId": chore.assignedToChildId?.uuidString,
+                "updatedAt": FieldValue.serverTimestamp()
+            ]
+            
+            try await db.collection("chores").document(chore.id.uuidString).updateData(choreData)
+            print("✅ Chore updated in Firestore: \(chore.title)")
+            
+        } catch {
+            print("❌ Error updating chore in Firestore: \(error)")
         }
     }
     
     func deleteChore(_ chore: Chore) {
         chores.removeAll { $0.id == chore.id }
+        
+        // Delete from Firestore
+        Task {
+            await deleteChoreFromFirestore(chore)
+        }
+    }
+    
+    private func deleteChoreFromFirestore(_ chore: Chore) async {
+        do {
+            try await db.collection("chores").document(chore.id.uuidString).delete()
+            print("✅ Chore deleted from Firestore: \(chore.title)")
+            
+        } catch {
+            print("❌ Error deleting chore from Firestore: \(error)")
+        }
     }
     
     func toggleChoreCompletion(_ chore: Chore) {
         if let index = chores.firstIndex(where: { $0.id == chore.id }) {
             chores[index].isCompleted.toggle()
+            
+            // Update completion status in Firestore
+            Task {
+                await updateChoreCompletionInFirestore(chore.id, isCompleted: chores[index].isCompleted)
+            }
+        }
+    }
+    
+    private func updateChoreCompletionInFirestore(_ choreId: UUID, isCompleted: Bool) async {
+        do {
+            try await db.collection("chores").document(choreId.uuidString).updateData([
+                "isCompleted": isCompleted,
+                "updatedAt": FieldValue.serverTimestamp()
+            ])
+            print("✅ Chore completion updated in Firestore: \(isCompleted)")
+            
+        } catch {
+            print("❌ Error updating chore completion in Firestore: \(error)")
         }
     }
     
@@ -42,12 +132,35 @@ class ChoreService: ObservableObject {
     func assignChoreToChild(_ chore: Chore, childId: UUID) {
         if let index = chores.firstIndex(where: { $0.id == chore.id }) {
             chores[index].assignedToChildId = childId
+            
+            // Update assignment in Firestore
+            Task {
+                await updateChoreAssignmentInFirestore(chore.id, childId: childId)
+            }
         }
     }
     
     func unassignChore(_ chore: Chore) {
         if let index = chores.firstIndex(where: { $0.id == chore.id }) {
             chores[index].assignedToChildId = nil
+            
+            // Update assignment in Firestore
+            Task {
+                await updateChoreAssignmentInFirestore(chore.id, childId: nil)
+            }
+        }
+    }
+    
+    private func updateChoreAssignmentInFirestore(_ choreId: UUID, childId: UUID?) async {
+        do {
+            try await db.collection("chores").document(choreId.uuidString).updateData([
+                "assignedToChildId": childId?.uuidString,
+                "updatedAt": FieldValue.serverTimestamp()
+            ])
+            print("✅ Chore assignment updated in Firestore: \(childId?.uuidString ?? "unassigned")")
+            
+        } catch {
+            print("❌ Error updating chore assignment in Firestore: \(error)")
         }
     }
     
@@ -63,13 +176,76 @@ class ChoreService: ObservableObject {
     
     func getChoresForParent(childrenIds: [UUID]) -> [Chore] {
         return chores.filter { chore in
-            // Show chores assigned to any of the parent's children
+            // Include chores assigned to any of the parent's children
             if let assignedChildId = chore.assignedToChildId {
                 return childrenIds.contains(assignedChildId)
             }
-            // Also show unassigned chores so parent can assign them
+            // Also include unassigned chores
             return true
         }
+    }
+    
+    // MARK: - Load Chores from Firestore
+    
+    func loadChoresFromFirestore() async {
+        await MainActor.run {
+            isLoading = true
+        }
+        
+        do {
+            let snapshot = try await db.collection("chores").getDocuments()
+            
+            await MainActor.run {
+                var loadedChores: [Chore] = []
+                
+                for document in snapshot.documents {
+                    let data = document.data()
+                    
+                    if let title = data["title"] as? String,
+                       let description = data["description"] as? String,
+                       let points = data["points"] as? Int,
+                       let dueDate = data["dueDate"] as? Date,
+                       let isCompleted = data["isCompleted"] as? Bool,
+                       let isRequired = data["isRequired"] as? Bool,
+                       let createdAt = data["createdAt"] as? Date {
+                        
+                        let choreId = UUID(uuidString: document.documentID) ?? UUID()
+                        let assignedToChildId = (data["assignedToChildId"] as? String).flatMap { UUID(uuidString: $0) }
+                        
+                        let chore = Chore(
+                            id: choreId,
+                            title: title,
+                            description: description,
+                            points: points,
+                            dueDate: dueDate,
+                            isCompleted: isCompleted,
+                            isRequired: isRequired,
+                            assignedToChildId: assignedToChildId,
+                            createdAt: createdAt
+                        )
+                        
+                        loadedChores.append(chore)
+                    }
+                }
+                
+                self.chores = loadedChores
+                self.isLoading = false
+                print("✅ Loaded \(loadedChores.count) chores from Firestore")
+            }
+            
+        } catch {
+            await MainActor.run {
+                self.isLoading = false
+                self.errorMessage = "Failed to load chores: \(error.localizedDescription)"
+                print("❌ Error loading chores from Firestore: \(error)")
+            }
+        }
+    }
+    
+    // MARK: - Statistics
+    
+    func getTotalChores() -> Int {
+        return chores.count
     }
     
     func getCompletedChores() -> [Chore] {
@@ -94,12 +270,6 @@ class ChoreService: ObservableObject {
             let choreDate = calendar.startOfDay(for: chore.dueDate)
             return choreDate >= today && choreDate < tomorrow
         }
-    }
-    
-    // MARK: - Statistics
-    
-    func getTotalChores() -> Int {
-        return chores.count
     }
     
     func getCompletedChoresCount() -> Int {

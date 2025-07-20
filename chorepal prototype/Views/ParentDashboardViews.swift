@@ -112,6 +112,12 @@ struct ParentDashboardView: View {
         .fullScreenCover(item: $selectedChild) { child in
                             ChildDetailsView(child: child, authService: authService, choreService: choreService)
         }
+        .onAppear {
+            // Load chores from Firestore when parent dashboard appears
+            Task {
+                await choreService.loadChoresFromFirestore()
+            }
+        }
     }
 }
 

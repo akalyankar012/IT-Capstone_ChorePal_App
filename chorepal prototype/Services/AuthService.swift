@@ -334,6 +334,55 @@ class AuthService: ObservableObject {
     func removeChild(_ child: Child) {
         children.removeAll { $0.id == child.id }
         currentParent?.children.removeAll { $0.id == child.id }
+        
+        // Delete from Firestore
+        Task {
+            await deleteChildFromFirestore(child)
+        }
+    }
+    
+    private func deleteChildFromFirestore(_ child: Child) async {
+        guard let currentUser = auth.currentUser else {
+            print("❌ Error: No Firebase user found when deleting child")
+            return
+        }
+        
+        do {
+            // Delete child document from Firestore
+            try await db.collection("children").document(child.id.uuidString).delete()
+            print("✅ Child deleted from Firestore: \(child.name)")
+            
+            // Remove child reference from parent document
+            try await db.collection("parents").document(currentUser.uid).updateData([
+                "children": FieldValue.arrayRemove([child.id.uuidString])
+            ])
+            print("✅ Child reference removed from parent document")
+            
+            // Also delete the child's Firebase Auth account if it exists
+            let childEmail = "\(child.id.uuidString)@child.chorepal.com"
+            let childPassword = "\(child.pin)00"
+            
+            do {
+                // Try to sign in as the child to get their Firebase Auth account
+                let result = try await auth.signIn(withEmail: childEmail, password: childPassword)
+                // Delete the Firebase Auth account
+                try await result.user.delete()
+                print("✅ Child Firebase Auth account deleted")
+                
+                // Sign back in as the parent
+                // We need to get the parent's credentials to sign back in
+                // For now, we'll just sign out and let the parent sign in again
+                try await auth.signOut()
+                print("⚠️ Signed out after deleting child. Parent needs to sign in again.")
+                
+            } catch {
+                print("⚠️ Could not delete child Firebase Auth account: \(error)")
+                // This is okay - the child account might not exist or we might not have permission
+            }
+            
+        } catch {
+            print("❌ Error deleting child from Firestore: \(error)")
+        }
     }
     
     // MARK: - Child Points Management
