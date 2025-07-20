@@ -19,6 +19,7 @@ struct ContentView: View {
     @AppStorage("selectedTheme") private var selectedTheme: Theme = .light
     @StateObject private var achievementManager = AchievementManager()
     @StateObject private var authService = AuthService()
+    @StateObject private var choreService = ChoreService()
     @State private var chores = Chore.sampleChores
     
     var body: some View {
@@ -43,7 +44,7 @@ struct ContentView: View {
                         .tag(0)
                         
                         NavigationView {
-                            HomeView(role: selectedRole, chores: $chores, achievementManager: achievementManager)
+                            HomeView(role: selectedRole, chores: $chores, achievementManager: achievementManager, choreService: choreService, authService: authService)
                         }
                         .tag(1)
                         
@@ -485,6 +486,8 @@ struct HomeView: View {
     let role: UserRole
     @Binding var chores: [Chore]
     @ObservedObject var achievementManager: AchievementManager
+    @ObservedObject var choreService: ChoreService
+    @ObservedObject var authService: AuthService
     @State private var showingAddChore = false
     @State private var selectedChore: Chore?
     
@@ -523,26 +526,24 @@ struct HomeView: View {
             
             // Chores List
             List {
-                ForEach(chores) { chore in
+                ForEach(choreService.chores) { chore in
                     ChoreRowView(chore: chore, onToggleComplete: { completed in
-                        if let index = chores.firstIndex(where: { $0.id == chore.id }) {
-                            chores[index].isCompleted = completed
-                            if completed {
-                                achievementManager.addCompletedChore(chores[index])
-                            } else {
-                                achievementManager.removeCompletedChore(chores[index])
-                            }
+                        var updatedChore = chore
+                        updatedChore.isCompleted = completed
+                        choreService.updateChore(updatedChore)
+                        if completed {
+                            achievementManager.addCompletedChore(updatedChore)
+                        } else {
+                            achievementManager.removeCompletedChore(updatedChore)
                         }
                     })
                     .swipeActions(edge: .trailing) {
                         if role == .parent {
                             Button(role: .destructive) {
-                                if let index = chores.firstIndex(where: { $0.id == chore.id }) {
-                                    if !chores[index].isCompleted {
-                                        achievementManager.removeCompletedChore(chores[index])
-                                    }
-                                    chores.remove(at: index)
+                                if !chore.isCompleted {
+                                    achievementManager.removeCompletedChore(chore)
                                 }
+                                choreService.deleteChore(chore)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -573,16 +574,10 @@ struct HomeView: View {
             }
         }
         .fullScreenCover(isPresented: $showingAddChore) {
-            AddChoreView { newChore in
-                chores.append(newChore)
-            }
+            AddChoreView(choreService: choreService, authService: authService)
         }
         .fullScreenCover(item: $selectedChore) { chore in
-            EditChoreView(chore: chore) { updatedChore in
-                if let index = chores.firstIndex(where: { $0.id == chore.id }) {
-                    chores[index] = updatedChore
-                }
-            }
+            EditChoreView(chore: chore, choreService: choreService, authService: authService)
         }
     }
 }
@@ -821,278 +816,7 @@ struct AchievementsView: View {
     }
 }
 
-// MARK: - Add Chore View
-struct AddChoreView: View {
-    @Environment(\.dismiss) private var dismiss
-    let onAdd: (Chore) -> Void
-    
-    @State private var title = ""
-    @State private var description = ""
-    @State private var pointsValue = 5
-    @State private var dueDate = Date()
-    @State private var isRequired = false
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                Color(.systemBackground)
-                    .ignoresSafeArea()
-                
-                Form {
-                    Section {
-                        TextField("Title", text: $title)
-                            .textFieldStyle(.plain)
-                        TextField("Description", text: $description)
-                            .textFieldStyle(.plain)
-                    } header: {
-                        Text("CHORE DETAILS")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    Section {
-                        HStack {
-                            Text("Points")
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            HStack(spacing: 16) {
-                                Button {
-                                    withAnimation {
-                                        if pointsValue > 1 {
-                                            pointsValue = max(1, pointsValue - 1)
-                                            print("Decreased points to: \(pointsValue)")
-                                        }
-                                    }
-                                } label: {
-                                    Image(systemName: "minus.circle.fill")
-                                        .foregroundColor(pointsValue > 1 ? themeColor() : Color(.systemGray4))
-                                        .font(.system(size: 24))
-                                }
-                                .buttonStyle(BorderlessButtonStyle())
-                                
-                                Text("\(pointsValue)")
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .frame(minWidth: 30)
-                                
-                                Button {
-                                    withAnimation {
-                                        if pointsValue < 100 {
-                                            pointsValue = min(100, pointsValue + 1)
-                                            print("Increased points to: \(pointsValue)")
-                                        }
-                                    }
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .foregroundColor(pointsValue < 100 ? themeColor() : Color(.systemGray4))
-                                        .font(.system(size: 24))
-                                }
-                                .buttonStyle(BorderlessButtonStyle())
-                            }
-                        }
-                    } header: {
-                        Text("POINTS")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    Section {
-                        DatePicker("Select Due Date", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
-                            .datePickerStyle(.graphical)
-                            .labelsHidden()
-                    } header: {
-                        Text("DUE DATE")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    Section {
-                        Toggle("Required Chore", isOn: $isRequired)
-                    } header: {
-                        Text("TYPE")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-                }
-                .scrollContentBackground(.hidden)
-            }
-            .navigationTitle("Add New Chore")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) {
-                        dismiss()
-                    }
-                    .foregroundColor(.blue)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        let newChore = Chore(
-                            title: title,
-                            description: description,
-                            points: pointsValue,
-                            dueDate: dueDate,
-                            isCompleted: false,
-                            isRequired: isRequired,
-                            createdAt: Date()
-                        )
-                        onAdd(newChore)
-                        dismiss()
-                    }
-                    .disabled(title.isEmpty || description.isEmpty)
-                }
-            }
-        }
-        .presentationBackground(.background)
-    }
-}
 
-// MARK: - Edit Chore View
-struct EditChoreView: View {
-    @Environment(\.dismiss) private var dismiss
-    let chore: Chore
-    let onUpdate: (Chore) -> Void
-    
-    @State private var title: String
-    @State private var description: String
-    @State private var pointsValue: Int
-    @State private var dueDate: Date
-    @State private var isRequired: Bool
-    
-    init(chore: Chore, onUpdate: @escaping (Chore) -> Void) {
-        self.chore = chore
-        self.onUpdate = onUpdate
-        _title = State(initialValue: chore.title)
-        _description = State(initialValue: chore.description)
-        _pointsValue = State(initialValue: chore.points)
-        _dueDate = State(initialValue: chore.dueDate)
-        _isRequired = State(initialValue: chore.isRequired)
-    }
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                Color(.systemBackground)
-                    .ignoresSafeArea()
-                
-                Form {
-                    Section {
-                        TextField("Title", text: $title)
-                            .textFieldStyle(.plain)
-                        TextField("Description", text: $description)
-                            .textFieldStyle(.plain)
-                    } header: {
-                        Text("CHORE DETAILS")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    Section {
-                        HStack {
-                            Text("Points")
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            HStack(spacing: 16) {
-                                Button {
-                                    withAnimation {
-                                        if pointsValue > 1 {
-                                            pointsValue = max(1, pointsValue - 1)
-                                            print("Decreased points to: \(pointsValue)")
-                                        }
-                                    }
-                                } label: {
-                                    Image(systemName: "minus.circle.fill")
-                                        .foregroundColor(pointsValue > 1 ? themeColor() : Color(.systemGray4))
-                                        .font(.system(size: 24))
-                                }
-                                .buttonStyle(BorderlessButtonStyle())
-                                
-                                Text("\(pointsValue)")
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .frame(minWidth: 30)
-                                
-                                Button {
-                                    withAnimation {
-                                        if pointsValue < 100 {
-                                            pointsValue = min(100, pointsValue + 1)
-                                            print("Increased points to: \(pointsValue)")
-                                        }
-                                    }
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .foregroundColor(pointsValue < 100 ? themeColor() : Color(.systemGray4))
-                                        .font(.system(size: 24))
-                                }
-                                .buttonStyle(BorderlessButtonStyle())
-                            }
-                        }
-                    } header: {
-                        Text("POINTS")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    Section {
-                        DatePicker("Select Due Date", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
-                            .datePickerStyle(.graphical)
-                            .labelsHidden()
-                    } header: {
-                        Text("DUE DATE")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    Section {
-                        Toggle("Required Chore", isOn: $isRequired)
-                    } header: {
-                        Text("TYPE")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    if !chore.isCompleted {
-                        Section {
-                            Button("Delete Chore", role: .destructive) {
-                                // Handle delete
-                            }
-                        }
-                    }
-                }
-                .scrollContentBackground(.hidden)
-            }
-            .navigationTitle("Edit Chore")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) {
-                        dismiss()
-                    }
-                    .foregroundColor(.blue)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        let updatedChore = Chore(
-                            title: title,
-                            description: description,
-                            points: pointsValue,
-                            dueDate: dueDate,
-                            isCompleted: chore.isCompleted,
-                            isRequired: isRequired,
-                            createdAt: chore.createdAt
-                        )
-                        onUpdate(updatedChore)
-                        dismiss()
-                    }
-                    .disabled(title.isEmpty || description.isEmpty)
-                }
-            }
-        }
-        .presentationBackground(.background)
-    }
-}
 
 // MARK: - Parent Points View
 struct ParentPointsView: View {
@@ -1243,7 +967,9 @@ struct ContentView_Previews: PreviewProvider {
             HomeView(
                 role: .child,
                 chores: .constant(Chore.sampleChores),
-                achievementManager: AchievementManager()
+                achievementManager: AchievementManager(),
+                choreService: ChoreService(),
+                authService: AuthService()
             )
             .previewDisplayName("Home View")
         }

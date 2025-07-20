@@ -34,7 +34,7 @@ enum AuthState {
 }
 
 // MARK: - Existing Models
-struct Chore: Identifiable {
+struct Chore: Identifiable, Codable {
     let id = UUID()
     var title: String
     var description: String
@@ -42,6 +42,7 @@ struct Chore: Identifiable {
     var dueDate: Date
     var isCompleted: Bool
     var isRequired: Bool
+    var assignedToChildId: UUID?
     var createdAt: Date
     
     static let sampleChores = [
@@ -51,6 +52,7 @@ struct Chore: Identifiable {
               dueDate: Date().addingTimeInterval(86400), 
               isCompleted: false,
               isRequired: true,
+              assignedToChildId: nil,
               createdAt: Date()),
         Chore(title: "Make Bed", 
               description: "Straighten sheets and arrange pillows", 
@@ -58,6 +60,7 @@ struct Chore: Identifiable {
               dueDate: Date().addingTimeInterval(86400), 
               isCompleted: false,
               isRequired: false,
+              assignedToChildId: nil,
               createdAt: Date()),
         Chore(title: "Clean Rooms", 
               description: "Pick up toys and vacuum floor", 
@@ -65,6 +68,7 @@ struct Chore: Identifiable {
               dueDate: Date().addingTimeInterval(86400), 
               isCompleted: false,
               isRequired: false,
+              assignedToChildId: nil,
               createdAt: Date())
     ]
 }

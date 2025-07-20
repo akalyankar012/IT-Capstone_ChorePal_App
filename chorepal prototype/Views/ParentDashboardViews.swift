@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Parent Dashboard View
 struct ParentDashboardView: View {
     @ObservedObject var authService: AuthService
+    @StateObject private var choreService = ChoreService()
     @State private var showingAddChild = false
     @State private var selectedChild: Child?
     @State private var showingChildDetails = false
@@ -26,7 +27,7 @@ struct ParentDashboardView: View {
                     .padding(.top, 20)
                     
                     // Family Overview Card
-                    FamilyOverviewCard(authService: authService)
+                    FamilyOverviewCard(authService: authService, choreService: choreService)
                     
                     // Children Management Section
                     ChildrenManagementSection(
@@ -37,7 +38,7 @@ struct ParentDashboardView: View {
                     )
                     
                     // Quick Actions Section
-                    QuickActionsSection()
+                    QuickActionsSection(choreService: choreService, authService: authService)
                     
                     Spacer(minLength: 100)
                 }
@@ -58,6 +59,7 @@ struct ParentDashboardView: View {
 // MARK: - Family Overview Card
 struct FamilyOverviewCard: View {
     @ObservedObject var authService: AuthService
+    @ObservedObject var choreService: ChoreService
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -92,14 +94,14 @@ struct FamilyOverviewCard: View {
             HStack(spacing: 20) {
                 StatCard(
                     title: "Active Chores",
-                    value: "\(activeChoresCount)",
+                    value: "\(choreService.getActiveChoresCount())",
                     icon: "checklist",
                     color: .green
                 )
                 
                 StatCard(
                     title: "Completed",
-                    value: "\(completedChoresCount)",
+                    value: "\(choreService.getCompletedChoresCount())",
                     icon: "checkmark.circle.fill",
                     color: .orange
                 )
@@ -115,15 +117,7 @@ struct FamilyOverviewCard: View {
         authService.currentParent?.children.reduce(0) { $0 + $1.points } ?? 0
     }
     
-    private var activeChoresCount: Int {
-        // This will be implemented when we add chore management
-        0
-    }
-    
-    private var completedChoresCount: Int {
-        // This will be implemented when we add chore management
-        0
-    }
+
 }
 
 // MARK: - Stat Card
@@ -287,6 +281,10 @@ struct EmptyChildrenView: View {
 
 // MARK: - Quick Actions Section
 struct QuickActionsSection: View {
+    @ObservedObject var choreService: ChoreService
+    @ObservedObject var authService: AuthService
+    @State private var showingChoreManagement = false
+    
     private let themeColor = Color(hex: "#a2cee3")
     
     var body: some View {
@@ -306,11 +304,19 @@ struct QuickActionsSection: View {
                 GridItem(.flexible())
             ], spacing: 12) {
                 QuickActionCard(
-                    title: "Add Chore",
-                    icon: "plus.circle.fill",
+                    title: "Manage Chores",
+                    icon: "list.bullet",
                     color: .green
                 ) {
-                    // Will be implemented when we add chore management
+                    showingChoreManagement = true
+                }
+                
+                QuickActionCard(
+                    title: "Add Chore",
+                    icon: "plus.circle.fill",
+                    color: .blue
+                ) {
+                    // Will be implemented with direct add chore
                 }
                 
                 QuickActionCard(
@@ -324,17 +330,9 @@ struct QuickActionsSection: View {
                 QuickActionCard(
                     title: "View Stats",
                     icon: "chart.bar.fill",
-                    color: .blue
+                    color: .orange
                 ) {
                     // Will be implemented when we add statistics
-                }
-                
-                QuickActionCard(
-                    title: "Settings",
-                    icon: "gearshape.fill",
-                    color: .gray
-                ) {
-                    // Will be implemented when we add settings
                 }
             }
         }
@@ -342,6 +340,9 @@ struct QuickActionsSection: View {
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .fullScreenCover(isPresented: $showingChoreManagement) {
+            ChoreManagementView(choreService: choreService, authService: authService)
+        }
     }
 }
 
