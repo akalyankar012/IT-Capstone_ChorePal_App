@@ -7,6 +7,8 @@ import FirebaseFirestore
 // MARK: - Notification Names
 extension Notification.Name {
     static let childPointsUpdated = Notification.Name("childPointsUpdated")
+    static let choreUpdated = Notification.Name("choreUpdated")
+    static let rewardUpdated = Notification.Name("rewardUpdated")
 }
 
 class AuthService: ObservableObject {
@@ -18,6 +20,11 @@ class AuthService: ObservableObject {
     
     private let auth = Auth.auth()
     private let db = Firestore.firestore()
+    
+    // Real-time listeners
+    private var childrenListener: ListenerRegistration?
+    private var choresListener: ListenerRegistration?
+    private var rewardsListener: ListenerRegistration?
     
     // Temporary storage for testing
     private var parents: [Parent] = []
@@ -592,7 +599,7 @@ class AuthService: ObservableObject {
             } catch {
                 print("❌ Firebase Auth sign in failed: \(error.localizedDescription)")
                 print("🔍 Error type: \(type(of: error))")
-                print("🔍 Error domain: \(error as NSError).domain")
+                print("🔍 Error domain: \((error as NSError).domain)")
                 print("🔍 Error code: \((error as NSError).code)")
                 
                 // Check if it's a user not found error or invalid credential
@@ -674,6 +681,7 @@ class AuthService: ObservableObject {
         if user.email?.contains("@parent") == true {
             // This is a parent user
             loadParentData(userId: user.uid)
+            setupRealTimeListeners() // Setup real-time listeners for parent
         } else {
             // This is a child user
             loadChildData(userId: user.uid)
@@ -681,6 +689,7 @@ class AuthService: ObservableObject {
     }
     
     private func handleSignOut() {
+        cleanupRealTimeListeners() // Cleanup listeners before signing out
         currentParent = nil
         currentChild = nil
         authState = .none
@@ -933,4 +942,54 @@ class AuthService: ObservableObject {
     }
     
     // MARK: - Helper Methods
+    
+    // MARK: - Real-time Listeners
+    
+    private func setupRealTimeListeners() {
+        guard let currentUser = auth.currentUser else { return }
+        
+        // Listen for children changes
+        childrenListener = db.collection("children")
+            .whereField("parentId", isEqualTo: currentUser.uid)
+            .addSnapshotListener { [weak self] snapshot, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("❌ Error listening for children changes: \(error)")
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents else { return }
+                    
+                    var loadedChildren: [Child] = []
+                    for document in documents {
+                        let data = document.data()
+                        if let name = data["name"] as? String,
+                           let pin = data["pin"] as? String,
+                           let parentIdString = data["parentId"] as? String {
+                            
+                            let childId = UUID(uuidString: document.documentID) ?? UUID()
+                            var child = Child(id: childId, name: name, pin: pin, parentId: UUID(uuidString: parentIdString) ?? UUID())
+                            child.points = data["points"] as? Int ?? 0
+                            child.totalPointsEarned = data["totalPointsEarned"] as? Int ?? 0
+                            
+                            loadedChildren.append(child)
+                        }
+                    }
+                    
+                    // Update parent with real-time children data
+                    self?.currentParent?.children = loadedChildren
+                    self?.children = loadedChildren
+                    print("🔄 Real-time children update: \(loadedChildren.count) children")
+                }
+            }
+    }
+    
+    private func cleanupRealTimeListeners() {
+        childrenListener?.remove()
+        choresListener?.remove()
+        rewardsListener?.remove()
+        childrenListener = nil
+        choresListener = nil
+        rewardsListener = nil
+    }
 } 

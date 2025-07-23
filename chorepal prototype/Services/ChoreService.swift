@@ -7,8 +7,16 @@ class ChoreService: ObservableObject {
     @Published var chores: [Chore] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var isOffline = false
     
     private let db = Firestore.firestore()
+    
+    // Cache for offline support
+    private var cachedChores: [Chore] = []
+    private var lastSyncTime: Date?
+    
+    // Real-time listener
+    private var choresListener: ListenerRegistration?
     
     init() {
         // Load chores from Firestore instead of sample data
@@ -33,25 +41,7 @@ class ChoreService: ObservableObject {
     }
     
     private func saveChoreToFirestore(_ chore: Chore) async {
-        do {
-            let choreData: [String: Any] = [
-                "title": chore.title,
-                "description": chore.description,
-                "points": chore.points,
-                "dueDate": chore.dueDate,
-                "isCompleted": chore.isCompleted,
-                "isRequired": chore.isRequired,
-                "assignedToChildId": chore.assignedToChildId?.uuidString,
-                "createdAt": chore.createdAt,
-                "updatedAt": FieldValue.serverTimestamp()
-            ]
-            
-            try await db.collection("chores").document(chore.id.uuidString).setData(choreData)
-            print("✅ Chore saved to Firestore: \(chore.title)")
-            
-        } catch {
-            print("❌ Error saving chore to Firestore: \(error)")
-        }
+        await saveChoreToFirestoreWithRetry(chore)
     }
     
     func updateChore(_ chore: Chore) {
@@ -66,24 +56,7 @@ class ChoreService: ObservableObject {
     }
     
     private func updateChoreInFirestore(_ chore: Chore) async {
-        do {
-            let choreData: [String: Any] = [
-                "title": chore.title,
-                "description": chore.description,
-                "points": chore.points,
-                "dueDate": chore.dueDate,
-                "isCompleted": chore.isCompleted,
-                "isRequired": chore.isRequired,
-                "assignedToChildId": chore.assignedToChildId?.uuidString,
-                "updatedAt": FieldValue.serverTimestamp()
-            ]
-            
-            try await db.collection("chores").document(chore.id.uuidString).updateData(choreData)
-            print("✅ Chore updated in Firestore: \(chore.title)")
-            
-        } catch {
-            print("❌ Error updating chore in Firestore: \(error)")
-        }
+        await updateChoreInFirestoreWithRetry(chore)
     }
     
     func deleteChore(_ chore: Chore) {
@@ -413,6 +386,236 @@ class ChoreService: ObservableObject {
             return getOverdueChores()
         case .dueToday:
             return getChoresDueToday()
+        }
+    }
+    
+    // MARK: - Caching & Offline Support
+    
+    private func cacheChores(_ chores: [Chore]) {
+        cachedChores = chores
+        lastSyncTime = Date()
+        saveToUserDefaults(chores)
+    }
+    
+    private func loadFromCache() {
+        if let data = UserDefaults.standard.data(forKey: "cachedChores"),
+           let decodedChores = try? JSONDecoder().decode([Chore].self, from: data) {
+            cachedChores = decodedChores
+            chores = decodedChores
+            print("📱 Loaded \(decodedChores.count) chores from cache")
+        }
+    }
+    
+    private func saveToUserDefaults(_ chores: [Chore]) {
+        if let encoded = try? JSONEncoder().encode(chores) {
+            UserDefaults.standard.set(encoded, forKey: "cachedChores")
+        }
+    }
+    
+    // MARK: - Real-time Listeners
+    
+    func setupRealTimeListener() {
+        choresListener = db.collection("chores")
+            .addSnapshotListener { [weak self] snapshot, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("❌ Error listening for chores changes: \(error)")
+                        self?.isOffline = true
+                        return
+                    }
+                    
+                    self?.isOffline = false
+                    guard let documents = snapshot?.documents else { return }
+                    
+                    var loadedChores: [Chore] = []
+                    for document in documents {
+                        if let chore = self?.parseChoreFromDocument(document) {
+                            loadedChores.append(chore)
+                        }
+                    }
+                    
+                    self?.chores = loadedChores
+                    self?.cacheChores(loadedChores)
+                    print("🔄 Real-time chores update: \(loadedChores.count) chores")
+                }
+            }
+    }
+    
+    private func parseChoreFromDocument(_ document: DocumentSnapshot) -> Chore? {
+        let data = document.data() ?? [:]
+        
+        guard let title = data["title"] as? String,
+              let description = data["description"] as? String,
+              let points = data["points"] as? Int,
+              let isCompleted = data["isCompleted"] as? Bool,
+              let isRequired = data["isRequired"] as? Bool else {
+            return nil
+        }
+        
+        // Handle dueDate - it might be stored as Timestamp
+        var dueDate = Date()
+        if let timestamp = data["dueDate"] as? Timestamp {
+            dueDate = timestamp.dateValue()
+        } else if let date = data["dueDate"] as? Date {
+            dueDate = date
+        }
+        
+        // Handle createdAt - it might be stored as Timestamp
+        var createdAt = Date()
+        if let timestamp = data["createdAt"] as? Timestamp {
+            createdAt = timestamp.dateValue()
+        } else if let date = data["createdAt"] as? Date {
+            createdAt = date
+        }
+        
+        let choreId = UUID(uuidString: document.documentID) ?? UUID()
+        let assignedToChildId = (data["assignedToChildId"] as? String).flatMap { UUID(uuidString: $0) }
+        
+        return Chore(
+            id: choreId,
+            title: title,
+            description: description,
+            points: points,
+            dueDate: dueDate,
+            isCompleted: isCompleted,
+            isRequired: isRequired,
+            assignedToChildId: assignedToChildId,
+            createdAt: createdAt
+        )
+    }
+    
+    func cleanupListener() {
+        choresListener?.remove()
+        choresListener = nil
+    }
+    
+    // MARK: - Optimized Data Loading
+    
+    private let pageSize = 20
+    private var lastDocument: DocumentSnapshot?
+    private var hasMoreData = true
+    
+    func loadChoresWithPagination() async {
+        await MainActor.run {
+            isLoading = true
+        }
+        
+        do {
+            var query = db.collection("chores")
+                .order(by: "createdAt", descending: true)
+                .limit(to: pageSize)
+            
+            if let lastDoc = lastDocument {
+                query = query.start(afterDocument: lastDoc)
+            }
+            
+            let snapshot = try await query.getDocuments()
+            
+            await MainActor.run {
+                let newChores = snapshot.documents.compactMap { parseChoreFromDocument($0) }
+                
+                if lastDocument == nil {
+                    // First page
+                    self.chores = newChores
+                } else {
+                    // Subsequent pages
+                    self.chores.append(contentsOf: newChores)
+                }
+                
+                self.lastDocument = snapshot.documents.last
+                self.hasMoreData = snapshot.documents.count == self.pageSize
+                self.isLoading = false
+                
+                print("📄 Loaded \(newChores.count) chores (page)")
+            }
+            
+        } catch {
+            await MainActor.run {
+                self.isLoading = false
+                self.errorMessage = "Failed to load chores: \(error.localizedDescription)"
+                print("❌ Error loading chores with pagination: \(error)")
+            }
+        }
+    }
+    
+    func loadMoreChoresIfNeeded() async {
+        guard hasMoreData && !isLoading else { return }
+        await loadChoresWithPagination()
+    }
+    
+    func refreshChores() async {
+        lastDocument = nil
+        hasMoreData = true
+        await loadChoresWithPagination()
+    }
+    
+    // MARK: - Error Handling & Retry Logic
+    
+    private let maxRetries = 3
+    private let retryDelay: TimeInterval = 2.0
+    
+    private func saveChoreToFirestoreWithRetry(_ chore: Chore, retryCount: Int = 0) async {
+        do {
+            let choreData: [String: Any] = [
+                "title": chore.title,
+                "description": chore.description,
+                "points": chore.points,
+                "dueDate": chore.dueDate,
+                "isCompleted": chore.isCompleted,
+                "isRequired": chore.isRequired,
+                "assignedToChildId": chore.assignedToChildId?.uuidString,
+                "createdAt": chore.createdAt,
+                "updatedAt": FieldValue.serverTimestamp()
+            ]
+            
+            try await db.collection("chores").document(chore.id.uuidString).setData(choreData)
+            print("✅ Chore saved to Firestore: \(chore.title)")
+            
+        } catch {
+            print("❌ Error saving chore to Firestore: \(error)")
+            
+            if retryCount < maxRetries {
+                print("🔄 Retrying save operation (attempt \(retryCount + 1)/\(maxRetries))")
+                try? await Task.sleep(nanoseconds: UInt64(retryDelay * 1_000_000_000))
+                await saveChoreToFirestoreWithRetry(chore, retryCount: retryCount + 1)
+            } else {
+                print("❌ Max retries reached for saving chore: \(chore.title)")
+                await MainActor.run {
+                    self.errorMessage = "Failed to save chore after \(maxRetries) attempts"
+                }
+            }
+        }
+    }
+    
+    private func updateChoreInFirestoreWithRetry(_ chore: Chore, retryCount: Int = 0) async {
+        do {
+            let choreData: [String: Any] = [
+                "title": chore.title,
+                "description": chore.description,
+                "points": chore.points,
+                "dueDate": chore.dueDate,
+                "isCompleted": chore.isCompleted,
+                "isRequired": chore.isRequired,
+                "assignedToChildId": chore.assignedToChildId?.uuidString,
+                "updatedAt": FieldValue.serverTimestamp()
+            ]
+            
+            try await db.collection("chores").document(chore.id.uuidString).updateData(choreData)
+            print("✅ Chore updated in Firestore: \(chore.title)")
+            
+        } catch {
+            print("❌ Error updating chore in Firestore: \(error)")
+            
+            if retryCount < maxRetries {
+                print("🔄 Retrying update operation (attempt \(retryCount + 1)/\(maxRetries))")
+                try? await Task.sleep(nanoseconds: UInt64(retryDelay * 1_000_000_000))
+                await updateChoreInFirestoreWithRetry(chore, retryCount: retryCount + 1)
+            } else {
+                print("❌ Max retries reached for updating chore: \(chore.title)")
+                await MainActor.run {
+                    self.errorMessage = "Failed to update chore after \(maxRetries) attempts"
+                }
+            }
         }
     }
 }

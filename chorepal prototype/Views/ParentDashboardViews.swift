@@ -16,93 +16,86 @@ struct ParentDashboardView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Header
-                VStack(spacing: 16) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Welcome back!")
-                                .font(.title2)
-                                .foregroundColor(.gray)
-                            
-                            Text("Family Dashboard")
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(themeColor)
+            ZStack {
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Offline Status Indicator
+                    if choreService.isOffline {
+                        HStack {
+                            Image(systemName: "wifi.slash")
+                                .foregroundColor(.orange)
+                            Text("Working Offline")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                            Spacer()
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                        .background(Color.orange.opacity(0.1))
+                    }
+                    
+                    // Header
+                    ParentDashboardHeader(
+                        authService: authService,
+                        showingAddChild: $showingAddChild
+                    )
+                    
+                    // Tab Selector
+                    HStack(spacing: 0) {
+                        TabButton(
+                            title: "Overview",
+                            icon: "house",
+                            isSelected: selectedTab == 0,
+                            action: { selectedTab = 0 }
+                        )
                         
-                        Spacer()
+                        TabButton(
+                            title: "Calendar",
+                            icon: "calendar",
+                            isSelected: selectedTab == 1,
+                            action: { selectedTab = 1 }
+                        )
                         
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                selectedTheme = selectedTheme == .light ? .dark : .light
-                                isAnimating.toggle()
-                            }
-                        }) {
-                            Image(systemName: selectedTheme.systemName)
-                                .font(.title2)
-                                .foregroundColor(selectedTheme == .light ? .yellow : themeColor)
-                                .padding()
-                                .rotationEffect(.degrees(isAnimating ? 360 : 0))
-                        }
+                        TabButton(
+                            title: "Settings",
+                            icon: "gearshape",
+                            isSelected: selectedTab == 2,
+                            action: { selectedTab = 2 }
+                        )
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 20)
+                    .padding(.bottom, 20)
+                    
+                    // Tab Content
+                    TabView(selection: $selectedTab) {
+                        ParentOverviewView(
+                            authService: authService,
+                            choreService: choreService,
+                            showingAddChild: $showingAddChild,
+                            selectedChild: $selectedChild,
+                            showingChildDetails: $showingChildDetails
+                        )
+                        .tag(0)
+                        
+                        ParentCalendarView(
+                            choreService: choreService,
+                            authService: authService
+                        )
+                        .tag(1)
+                        
+                        ParentSettingsView(
+                            selectedTheme: $selectedTheme,
+                            authService: authService,
+                            isAnimating: $isAnimating
+                        )
+                        .tag(2)
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 }
                 .padding(.bottom, 16)
-                
-                // Tab Selector
-                HStack(spacing: 0) {
-                    TabButton(
-                        title: "Overview",
-                        icon: "house",
-                        isSelected: selectedTab == 0,
-                        action: { selectedTab = 0 }
-                    )
-                    
-                    TabButton(
-                        title: "Calendar",
-                        icon: "calendar",
-                        isSelected: selectedTab == 1,
-                        action: { selectedTab = 1 }
-                    )
-                    
-                    TabButton(
-                        title: "Settings",
-                        icon: "gearshape",
-                        isSelected: selectedTab == 2,
-                        action: { selectedTab = 2 }
-                    )
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 20)
-                
-                // Tab Content
-                TabView(selection: $selectedTab) {
-                    ParentOverviewView(
-                        authService: authService,
-                        choreService: choreService,
-                        showingAddChild: $showingAddChild,
-                        selectedChild: $selectedChild,
-                        showingChildDetails: $showingChildDetails
-                    )
-                    .tag(0)
-                    
-                    ParentCalendarView(
-                        choreService: choreService,
-                        authService: authService
-                    )
-                    .tag(1)
-                    
-                    ParentSettingsView(
-                        selectedTheme: $selectedTheme,
-                        authService: authService,
-                        isAnimating: $isAnimating
-                    )
-                    .tag(2)
-                }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
-            .background(Color(.systemGroupedBackground))
             .navigationBarHidden(true)
         }
         .preferredColorScheme(selectedTheme == .light ? .light : .dark)
@@ -1380,5 +1373,48 @@ struct TabButton: View {
                     .fill(isSelected ? themeColor.opacity(0.1) : Color.clear)
             )
         }
+    }
+} 
+
+// MARK: - Parent Dashboard Header
+struct ParentDashboardHeader: View {
+    @ObservedObject var authService: AuthService
+    @Binding var showingAddChild: Bool
+    @AppStorage("selectedTheme") private var selectedTheme: Theme = .light
+    @State private var isAnimating = false
+    
+    private let themeColor = Color(hex: "#a2cee3")
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Welcome back!")
+                        .font(.title2)
+                        .foregroundColor(.gray)
+                    
+                    Text("Family Dashboard")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(themeColor)
+                }
+                
+                Spacer()
+                
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedTheme = selectedTheme == .light ? .dark : .light
+                        isAnimating.toggle()
+                    }
+                }) {
+                    Image(systemName: selectedTheme.systemName)
+                        .font(.title2)
+                        .foregroundColor(selectedTheme == .light ? .yellow : themeColor)
+                        .padding()
+                        .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                }
+            }
+            .padding(.top, 20)
+        }
+        .padding(.bottom, 16)
     }
 } 
