@@ -566,95 +566,27 @@ class AuthService: ObservableObject {
             }
             
             // Create child object from Firestore data
-            // Use the document ID as the child ID, or generate a new UUID if it's not valid
-            let childId: UUID
-            if let uuid = UUID(uuidString: document.documentID) {
-                childId = uuid
-            } else {
-                childId = UUID()
-            }
-            
+            let childId = UUID(uuidString: document.documentID) ?? UUID()
             let parentId = UUID(uuidString: parentIdString) ?? UUID()
             var child = Child(id: childId, name: name, pin: childPin, parentId: parentId)
             child.points = data["points"] as? Int ?? 0
+            child.totalPointsEarned = data["totalPointsEarned"] as? Int ?? 0
             
-            // Create Firebase account for child if it doesn't exist
-            let childEmail = "\(child.id.uuidString)@child.chorepal.com"
-            // Pad PIN to meet Firebase's minimum 6-character password requirement
-            let childPassword = "\(pin)00" // Add "00" to make it 6 characters
+            print("✅ Child found: \(name) with PIN: \(childPin)")
+            print("📊 Child points: \(child.points), Total earned: \(child.totalPointsEarned)")
             
-            print("🔐 Attempting Firebase Auth with email: \(childEmail)")
-            
-            do {
-                // Try to sign in with Firebase (using padded password)
-                try await auth.signIn(withEmail: childEmail, password: childPassword)
-                print("✅ Firebase Auth sign in successful")
-                
-                // Firebase auth state listener will handle the rest
-                await MainActor.run {
-                    isLoading = false
-                }
-                
-                return true
-            } catch {
-                print("❌ Firebase Auth sign in failed: \(error.localizedDescription)")
-                print("🔍 Error type: \(type(of: error))")
-                print("🔍 Error domain: \((error as NSError).domain)")
-                print("🔍 Error code: \((error as NSError).code)")
-                
-                // Check if it's a user not found error or invalid credential
-                let nsError = error as NSError
-                if nsError.domain == "FIRAuthErrorDomain" {
-                    print("🔍 Firebase Auth error detected")
-                    
-                    if nsError.code == 17011 || nsError.code == 17004 {
-                        print("👶 Creating new Firebase Auth account for child")
-                        
-                        do {
-                            // Create child account in Firebase
-                            let result = try await auth.createUser(withEmail: childEmail, password: childPassword)
-                            print("✅ Firebase Auth account created successfully")
-                            
-                            // Update the existing child document with the Firebase Auth UID
-                            let childUpdateData: [String: Any] = [
-                                "firebaseAuthUid": result.user.uid
-                            ]
-                            
-                            try await db.collection("children").document(child.id.uuidString).updateData(childUpdateData)
-                            print("✅ Child data updated in Firestore with new Firebase UID: \(result.user.uid)")
-                            
-                            // Firebase auth state listener will handle the rest
-                            await MainActor.run {
-                                isLoading = false
-                            }
-                            
-                            return true
-                        } catch {
-                            print("❌ Failed to create Firebase Auth account: \(error.localizedDescription)")
-                            await MainActor.run {
-                                errorMessage = "Failed to create account: \(error.localizedDescription)"
-                                isLoading = false
-                            }
-                            return false
-                        }
-                    } else {
-                        print("❌ Unexpected Firebase Auth error code: \(nsError.code)")
-                        await MainActor.run {
-                            errorMessage = "Authentication error: \(error.localizedDescription)"
-                            isLoading = false
-                        }
-                        return false
-                    }
-                } else {
-                    print("❌ Non-Firebase Auth error: \(error)")
-                    await MainActor.run {
-                        errorMessage = "Authentication error: \(error.localizedDescription)"
-                        isLoading = false
-                    }
-                    return false
-                }
+            // Set the current child and update auth state
+            await MainActor.run {
+                self.currentChild = child
+                self.authState = .authenticated
+                self.isLoading = false
             }
+            
+            print("✅ Child authentication successful")
+            return true
+            
         } catch {
+            print("❌ Error during child authentication: \(error)")
             await MainActor.run {
                 errorMessage = "Error: \(error.localizedDescription)"
                 isLoading = false
@@ -667,6 +599,15 @@ class AuthService: ObservableObject {
     
     func signOut() {
         do {
+            // If we have a current child, just clear the child data (no Firebase Auth sign out needed)
+            if currentChild != nil {
+                currentChild = nil
+                authState = .none
+                print("✅ Child signed out successfully")
+                return
+            }
+            
+            // For parents, sign out from Firebase Auth
             try auth.signOut()
             // Firebase auth state listener will handle the rest
         } catch {
@@ -683,8 +624,9 @@ class AuthService: ObservableObject {
             loadParentData(userId: user.uid)
             setupRealTimeListeners() // Setup real-time listeners for parent
         } else {
-            // This is a child user
-            loadChildData(userId: user.uid)
+            // This is a child user - but we're not using Firebase Auth for children anymore
+            // Children are authenticated via PIN only
+            print("⚠️ Child Firebase Auth detected - this shouldn't happen with new PIN-only auth")
         }
     }
     
@@ -810,76 +752,8 @@ class AuthService: ObservableObject {
         print("Mock parent created successfully with \(parent.children.count) children")
     }
     
-    private func loadChildData(userId: String) {
-        print("🔍 Loading child data for Firebase Auth UID: \(userId)")
-        
-        // First, try to find the child by searching for the Firebase Auth UID in the children collection
-        db.collection("children")
-            .whereField("firebaseAuthUid", isEqualTo: userId)
-            .getDocuments { [weak self] snapshot, error in
-                DispatchQueue.main.async {
-                    if let error = error {
-                        print("❌ Error searching for child with firebaseAuthUid: \(error)")
-                        // Try alternative search method
-                        self?.searchChildByEmail(userId: userId)
-                        return
-                    }
-                    
-                    guard let documents = snapshot?.documents, !documents.isEmpty else {
-                        print("❌ No child found with Firebase Auth UID: \(userId)")
-                        // Try alternative search method
-                        self?.searchChildByEmail(userId: userId)
-                        return
-                    }
-                    
-                    // Get the first (and should be only) child document
-                    let document = documents[0]
-                    self?.loadChildFromDocument(document)
-                }
-            }
-    }
-    
-    private func searchChildByEmail(userId: String) {
-        print("🔍 Trying alternative search method for child with UID: \(userId)")
-        
-        // Extract the child ID from the Firebase Auth UID (which should be the child's UUID)
-        // The Firebase Auth email format is: {childId}@child.chorepal.com
-        // So we can try to find the child document using the child ID
-        
-        // Get all children and find the one that matches
-        db.collection("children").getDocuments { [weak self] snapshot, error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    print("❌ Error getting all children: \(error)")
-                    self?.createMockChild(userId: userId)
-                    return
-                }
-                
-                guard let documents = snapshot?.documents else {
-                    print("❌ No children found in database")
-                    self?.createMockChild(userId: userId)
-                    return
-                }
-                
-                // Find the child document that might match this Firebase Auth UID
-                for document in documents {
-                    let data = document.data()
-                    let documentId = document.documentID
-                    
-                    // Check if this document ID matches the Firebase Auth UID pattern
-                    // or if the firebaseAuthUid field matches
-                    if documentId == userId || data["firebaseAuthUid"] as? String == userId {
-                        print("✅ Found matching child document: \(documentId)")
-                        self?.loadChildFromDocument(document)
-                        return
-                    }
-                }
-                
-                print("❌ No matching child found, creating mock child")
-                self?.createMockChild(userId: userId)
-            }
-        }
-    }
+    // Child data loading is now handled directly in signInChild method
+    // No separate loadChildData method needed for PIN-based authentication
     
     private func loadChildFromDocument(_ document: DocumentSnapshot) {
         let data = document.data() ?? [:]
@@ -893,7 +767,6 @@ class AuthService: ObservableObject {
             pin = String(pinNumber)
         } else {
             print("❌ PIN field not found or invalid type")
-            createMockChild(userId: document.documentID)
             return
         }
         
@@ -928,18 +801,10 @@ class AuthService: ObservableObject {
             print("❌ Invalid child data structure - missing required fields")
             print("🔍 Name: \(data["name"] ?? "nil")")
             print("🔍 ParentId: \(data["parentId"] ?? "nil")")
-            createMockChild(userId: document.documentID)
         }
     }
     
-    private func createMockChild(userId: String) {
-        // Create a mock child for testing
-        let childId = UUID(uuidString: userId) ?? UUID()
-        let child = Child(id: childId, name: "Test Child", pin: "1234", parentId: UUID())
-        
-        currentChild = child
-        authState = .authenticated
-    }
+    // Mock child creation no longer needed with PIN-based authentication
     
     // MARK: - Helper Methods
     
