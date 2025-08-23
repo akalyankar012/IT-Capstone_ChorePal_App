@@ -19,7 +19,19 @@ class ChoreService: ObservableObject {
     private var choresListener: ListenerRegistration?
     
     init() {
-        // Load chores from Firestore instead of sample data
+        // Don't load data immediately - wait for authentication
+        // Data will be loaded when user signs in
+        
+        // Listen for authentication events
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(loadDataOnAuthentication),
+            name: .userAuthenticated,
+            object: nil
+        )
+    }
+    
+    @objc private func loadDataOnAuthentication() {
         Task {
             await loadChoresFromFirestore()
         }

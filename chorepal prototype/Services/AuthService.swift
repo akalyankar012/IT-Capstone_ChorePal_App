@@ -9,6 +9,7 @@ extension Notification.Name {
     static let childPointsUpdated = Notification.Name("childPointsUpdated")
     static let choreUpdated = Notification.Name("choreUpdated")
     static let rewardUpdated = Notification.Name("rewardUpdated")
+    static let userAuthenticated = Notification.Name("userAuthenticated")
 }
 
 class AuthService: ObservableObject {
@@ -582,6 +583,9 @@ class AuthService: ObservableObject {
                 self.isLoading = false
             }
             
+            // Trigger data loading for authenticated child
+            NotificationCenter.default.post(name: .userAuthenticated, object: nil)
+            
             print("✅ Child authentication successful")
             return true
             
@@ -623,6 +627,9 @@ class AuthService: ObservableObject {
             // This is a parent user
             loadParentData(userId: user.uid)
             setupRealTimeListeners() // Setup real-time listeners for parent
+            
+            // Trigger data loading for authenticated parent
+            NotificationCenter.default.post(name: .userAuthenticated, object: nil)
         } else {
             // This is a child user - but we're not using Firebase Auth for children anymore
             // Children are authenticated via PIN only
