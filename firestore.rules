@@ -1,29 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Development/Testing rules - allow all authenticated operations
-    // TODO: Make more restrictive for production
+    // Development/Testing rules - allow all operations for now
+    // This allows PIN-based authentication without requiring Firebase Auth
     
-    // Allow authenticated users to read/write all data
+    // Allow all read/write operations for development
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
     
-    // Alternative: More specific rules for production
-    // match /parents/{parentId} {
-    //   allow read, write: if request.auth != null && request.auth.uid == parentId;
-    // }
-    
-    // match /children/{childId} {
-    //   allow read, write: if request.auth != null;
-    // }
-    
-    // match /chores/{choreId} {
-    //   allow read, write: if request.auth != null;
-    // }
-    
-    // match /rewards/{rewardId} {
-    //   allow read, write: if request.auth != null;
-    // }
+    // TODO: For production, implement more restrictive rules:
+    // - Parents can only access their own data
+    // - Children can only access their own data via PIN
+    // - Chores and rewards can be accessed by authenticated users
   }
 }

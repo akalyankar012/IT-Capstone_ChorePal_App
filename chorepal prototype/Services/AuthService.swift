@@ -536,14 +536,7 @@ class AuthService: ObservableObject {
         print("🔍 Searching for child with PIN: \(pin)")
         
         do {
-            // First, ensure we have anonymous authentication for Firestore access
-            if auth.currentUser == nil {
-                print("🔐 No user authenticated, signing in anonymously...")
-                try await auth.signInAnonymously()
-                print("✅ Anonymous authentication successful")
-            }
-            
-            // Search for child in Firestore by PIN
+            // Search for child in Firestore by PIN (no Firebase Auth required)
             let snapshot = try await db.collection("children")
                 .whereField("pin", isEqualTo: pin)
                 .getDocuments()
@@ -610,12 +603,10 @@ class AuthService: ObservableObject {
     
     func signOut() {
         do {
-            // If we have a current child, clear the child data and sign out from anonymous auth
+            // If we have a current child, just clear the child data (no Firebase Auth needed)
             if currentChild != nil {
                 currentChild = nil
                 authState = .none
-                // Sign out from anonymous authentication
-                try auth.signOut()
                 print("✅ Child signed out successfully")
                 return
             }
