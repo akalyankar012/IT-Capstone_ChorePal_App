@@ -1413,6 +1413,7 @@ struct ParentDashboardHeader: View {
                         .rotationEffect(.degrees(isAnimating ? 360 : 0))
                 }
             }
+            .padding(.horizontal, 20)
             .padding(.top, 20)
         }
         .padding(.bottom, 16)
