@@ -28,8 +28,9 @@ struct ManageRewardsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
+                            .background(Color(.systemGray6))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                     
                     // Filter Pills
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -53,9 +54,10 @@ struct ManageRewardsView: View {
                                     .font(.caption)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
-                                    .background(selectedCategory == nil ? themeColor : Color(.systemGray5))
-                                    .foregroundColor(selectedCategory == nil ? .white : .primary)
-                                    .cornerRadius(16)
+                                            .background(selectedCategory == nil ? themeColor : Color(.systemGray5))
+        .foregroundColor(selectedCategory == nil ? .white : .primary)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                             }
                             
                             ForEach(RewardCategory.allCases, id: \.self) { category in
@@ -68,9 +70,10 @@ struct ManageRewardsView: View {
                                     }
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
-                                    .background(selectedCategory == category ? Color(hex: category.color) : Color(.systemGray5))
-                                    .foregroundColor(selectedCategory == category ? .white : .primary)
-                                    .cornerRadius(16)
+                                            .background(selectedCategory == category ? Color(hex: category.color) : Color(.systemGray5))
+        .foregroundColor(selectedCategory == category ? .white : .primary)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                                 }
                             }
                         }

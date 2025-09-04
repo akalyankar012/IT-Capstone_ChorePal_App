@@ -332,7 +332,7 @@ struct ChildChoreRow: View {
         .padding(16)
         .background(Color(.systemBackground))
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -376,12 +376,15 @@ struct ChildStatCard: View {
             Text(value)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
                 .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color(.systemGray4), lineWidth: 1)
-                        .background(Color(.systemBackground))
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color(.systemGray6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color(.systemGray5), lineWidth: 0.5)
+                        )
                 )
             
             Text(title)
@@ -393,7 +396,7 @@ struct ChildStatCard: View {
         .padding(.vertical, 16)
         .background(Color(.systemBackground))
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -421,13 +424,16 @@ struct ChildRewardsView: View {
                             .font(.title3)
                             .foregroundColor(.gray)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(.systemGray4), lineWidth: 1)
-                            .background(Color(.systemBackground))
-                    )
+                            .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.systemGray6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color(.systemGray5), lineWidth: 0.5)
+                )
+        )
                     
                     HStack {
                         Image(systemName: "trophy.fill")
@@ -440,13 +446,16 @@ struct ChildRewardsView: View {
                             .font(.subheadline)
                             .foregroundColor(.gray)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(.systemGray4), lineWidth: 1)
-                            .background(Color(.systemBackground))
-                    )
+                            .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.systemGray6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color(.systemGray5), lineWidth: 0.5)
+                )
+        )
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)

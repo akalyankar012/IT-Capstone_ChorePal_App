@@ -77,7 +77,8 @@ struct ParentSignUpView: View {
                                     .padding(.horizontal, 12)
                             }
                             .background(Color(.systemGray6))
-                            .cornerRadius(12)
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                         }
                         
                         // Password
@@ -106,7 +107,8 @@ struct ParentSignUpView: View {
                             .padding(.vertical, 16)
                             .padding(.leading, 16)
                             .background(Color(.systemGray6))
-                            .cornerRadius(12)
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                         }
                         
                         // Confirm Password
@@ -135,7 +137,8 @@ struct ParentSignUpView: View {
                             .padding(.vertical, 16)
                             .padding(.leading, 16)
                             .background(Color(.systemGray6))
-                            .cornerRadius(12)
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                         }
                         
                         // Error Message
@@ -385,13 +388,14 @@ struct VerificationCodeDigit: View {
     
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 16)
                 .fill(isActive ? themeColor.opacity(0.2) : Color(.systemGray6))
                 .frame(width: 50, height: 60)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isActive ? themeColor : Color.clear, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(isActive ? themeColor : Color(.systemGray5), lineWidth: 1)
                 )
+                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
             
             Text(digit)
                 .font(.system(size: 24, weight: .bold))
@@ -440,7 +444,7 @@ struct ParentSignInView: View {
                             .scaledToFit()
                             .frame(width: 120, height: 120)
                             .cornerRadius(20)
-                            .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
                         
                         Text("Welcome Back!")
                             .font(.system(size: 32, weight: .heavy))
@@ -475,7 +479,8 @@ struct ParentSignInView: View {
                                     .padding(.horizontal, 12)
                             }
                             .background(Color(.systemGray6))
-                            .cornerRadius(12)
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                         }
                         
                         // Password
@@ -504,7 +509,8 @@ struct ParentSignInView: View {
                             .padding(.vertical, 16)
                             .padding(.leading, 16)
                             .background(Color(.systemGray6))
-                            .cornerRadius(12)
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                         }
                         
                         // Error Message
@@ -617,7 +623,7 @@ struct ChildLoginView: View {
                             .scaledToFit()
                             .frame(width: 120, height: 120)
                             .cornerRadius(20)
-                            .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
                         
                         Text("Welcome, Kid!")
                             .font(.system(size: 32, weight: .heavy))

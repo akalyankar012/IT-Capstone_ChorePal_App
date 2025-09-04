@@ -75,7 +75,7 @@ struct ContentView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 30)
                                 .fill(Color(.systemGray6))
-                                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
                         )
                         .padding(.horizontal, 40)
                         .padding(.bottom, 20)
@@ -688,7 +688,7 @@ struct ChoreRowView: View {
                 }) {
                     ZStack {
                         Circle()
-                            .stroke(isCompleted ? Color.clear : Color(.systemGray4), lineWidth: 1.5)
+                            .stroke(isCompleted ? Color.clear : Color(.systemGray5), lineWidth: 1)
                             .background(
                                 Circle()
                                     .fill(isCompleted ? themeColor : Color.clear)
