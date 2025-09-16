@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "chorepal-ios-app-472321",
+  "private_key_id": "7265da6b12419ab17db7d1114ff83dd604234b93",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDWxxFRp2YPaaCC\nCHQxokwXApGa5zA/e8bQ9wcQHF4C6CpbWhr3NV3O0i89TGt1fhihv9VZWWkPH1bK\npUbEFdZwD0sG2Meu6cxefKQRKqiPDYZRYQC5J508vxLrsQeU8pKAx5fS4UCyCiHs\nrT6NOHjVVTbETlmk2zRaay8OmJqTUZ7eZ0JNzPHdh4ErvC5o/N53jemMcZQZjfyz\nCsy5zVuwc0BfSIh66ZPWGA1Ait3GNWGJHjhD+dZFuzPovOhw5hcGE75Gdk7Y9vWd\n2a5t7o69kIJUJyetnLJWXrqp0qR3h1V1A++T4GFyZWa/NdcVnEhIddwhpXr8XJYl\nUuEJHFtJAgMBAAECggEABxZBfYrDBN4s5C2IO/0JerbkfBKF1opsiIemLYNqHLlx\ncFs8SYzyv/jSgzjK0PEsueWdEhovq8aSdBRZDe5UiZUPmjW7/QsM6c8+EKzyK+o7\n1OKZBgMHHrKFWs6YG/OXHvW3DkfNfTJ1ZRxgVIOZBR0PNhIJxjVPeG5R+q7RZuv6\nkiS+iCe4d9dXzeB0k+KKiUFFPlfNnrEWRcextZsRXju22LOyWTXIKOIrTkEC6YfI\np3zUU0jjH8W2mkfb9wj+qf+CkTArMnMvq6tOU5lcXN+qchpVqkQ4x+LZYk+I4MRf\n2O43+2cmiKJyuWTBi/NdMnRBtprWySg4Ddok8tNNQQKBgQDvd2sV+skcwl/mMbbw\nHpiF0YWO9glHShOjVPIwYOMYfx6+uv7/qiQhIzqZXDnY9nCTDhicLT1hzQFQ8RUu\nnfcBhrEakDy9LMBtwTFQIN00PMhiKZh4xvWwSrndXtZwM8eqz49b8RWf1DeEt4rn\nuTFl2sLVtUq/BR9raH02lQlfsQKBgQDlm0W5+sp2RnIM1WjtCmSIf7MttR80MA2A\nY9dxZgXKDYKMIODwO5hcL8cdiqoFoqRoSQH2SDHIJf8nkfhQiT8G8AE0LEhSNMem\n9EcPLJvscI9iEquYg9E0lORYGESwxCmp5mE7TxSiRbDyrmkQEauP/1BkuwNDZQmH\nERlJB23zGQKBgCQBcqqFYMPgPgcgpn8IOqq0TD6oo9CCRN2kIh5AEyVVx8up1jme\n3XvWDjOM+G208ExMLEsfSkFwT6hZ93Ng8Qjbtblmwps3JV/bUozXxCrckMyhsHlI\ngRyWv8eXQOrx/i2is82BPF0hzY85AbvBzrmf4Pe9IJYEMSs3NMyGMDihAoGAPN9o\nogECck8E57AgrE+IDcRFXcXaKvzeZ36Q3Miemk3woXQKDsbOAwrLsGJV5z6Sde99\nLK1BPX4NYpFJkxh/9DfnKczfs6O4luPGfxhlkk7ZRLgMdFfmPBmJXG26sF6haSDi\nAFZb8xWk7wIcap00re2Tg9Es8U41M3DuEjV9CekCgYBg8XhTebHwzxxAbAhL7wUQ\n9Dl9FXuayCKdpSQSPfgTHvIf0ErlhRb9CJdj7jtV11hW/C952clMpIrPyd0dbyA4\nOdq4EfiYpZkuwaDxHp/KFQedB2FA9WkLSkt0Z3oHxW6//Yo9Jrjd+vtHSgiTr/1S\nQe2v+lQW+XE8q8YEKqgAgQ==\n-----END PRIVATE KEY-----\n",
+  "client_email": "chorepal-voice-service@chorepal-ios-app-472321.iam.gserviceaccount.com",
+  "client_id": "115832668218051760794",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/chorepal-voice-service%40chorepal-ios-app-472321.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
