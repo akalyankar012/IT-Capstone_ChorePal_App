@@ -22,6 +22,8 @@ class AuthService: ObservableObject {
     private let auth = Auth.auth()
     private let db = Firestore.firestore()
     
+
+
     // Real-time listeners
     private var childrenListener: ListenerRegistration?
     private var choresListener: ListenerRegistration?
