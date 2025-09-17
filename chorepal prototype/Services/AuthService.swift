@@ -38,7 +38,7 @@ class AuthService: ObservableObject {
         setupSampleData()
         
         // Listen for Firebase auth state changes
-        auth.addStateDidChangeListener { [weak self] _, user in
+        _ = auth.addStateDidChangeListener { [weak self] _, user in
             DispatchQueue.main.async {
                 if let user = user {
                     // User is signed in
@@ -309,7 +309,7 @@ class AuthService: ObservableObject {
     }
     
     private func saveChildToFirestore(_ child: Child) async {
-        guard let parent = currentParent else {
+        guard currentParent != nil else {
             print("Error: No parent found when saving child")
             return
         }
@@ -347,8 +347,14 @@ class AuthService: ObservableObject {
     }
     
     func removeChild(_ child: Child) {
+        // Remove from local arrays
         children.removeAll { $0.id == child.id }
         currentParent?.children.removeAll { $0.id == child.id }
+        
+        // Update the published property to trigger UI refresh
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
         
         // Delete from Firestore
         Task {
@@ -363,22 +369,87 @@ class AuthService: ObservableObject {
         }
         
         do {
-            // Delete child document from Firestore
-            try await db.collection("children").document(child.id.uuidString).delete()
-            print("✅ Child deleted from Firestore: \(child.name)")
+            // Use a batch write to ensure atomic deletion
+            let batch = db.batch()
+            
+            // Delete child document
+            let childRef = db.collection("children").document(child.id.uuidString)
+            batch.deleteDocument(childRef)
             
             // Remove child reference from parent document
-            try await db.collection("parents").document(currentUser.uid).updateData([
+            let parentRef = db.collection("parents").document(currentUser.uid)
+            batch.updateData([
                 "children": FieldValue.arrayRemove([child.id.uuidString])
-            ])
+            ], forDocument: parentRef)
+            
+            // Commit the batch
+            try await batch.commit()
+            print("✅ Child deleted from Firestore: \(child.name)")
             print("✅ Child reference removed from parent document")
             
-            // Note: We're not deleting the child's Firebase Auth account to avoid signing out the parent
-            // The child's Firebase Auth account will remain but won't be accessible since we've deleted the Firestore data
-            print("ℹ️ Child Firebase Auth account left intact to preserve parent session")
+            // Force refresh the parent data from Firestore
+            await refreshParentData()
             
         } catch {
             print("❌ Error deleting child from Firestore: \(error)")
+            // Revert local changes if Firestore deletion failed
+            await MainActor.run {
+                // Re-add the child to local arrays if deletion failed
+                if !self.children.contains(where: { $0.id == child.id }) {
+                    self.children.append(child)
+                    self.currentParent?.children.append(child)
+                    self.objectWillChange.send()
+                }
+            }
+        }
+    }
+    
+    // MARK: - Data Refresh
+    
+    private func refreshParentData() async {
+        guard let currentUser = auth.currentUser else { return }
+        
+        do {
+            let parentDoc = try await db.collection("parents").document(currentUser.uid).getDocument()
+            
+            if let parentData = parentDoc.data() {
+                let childrenIds = parentData["children"] as? [String] ?? []
+                
+                // Fetch all children documents
+                var fetchedChildren: [Child] = []
+                for childId in childrenIds {
+                    let childDoc = try await db.collection("children").document(childId).getDocument()
+                    if let childData = childDoc.data() {
+                        let childIdUUID = UUID(uuidString: childId) ?? UUID()
+                        let parentIdUUID = UUID(uuidString: parentData["id"] as? String ?? "") ?? UUID()
+                        let childName = childData["name"] as? String ?? ""
+                        let childPin = childData["pin"] as? String ?? ""
+                        let childPoints = childData["points"] as? Int ?? 0
+                        let childTotalPoints = childData["totalPointsEarned"] as? Int ?? 0
+                        
+                        var child = Child(
+                            id: childIdUUID,
+                            name: childName,
+                            pin: childPin,
+                            parentId: parentIdUUID
+                        )
+                        child.points = childPoints
+                        child.totalPointsEarned = childTotalPoints
+                        fetchedChildren.append(child)
+                    }
+                }
+                
+                // Update local data
+                await MainActor.run {
+                    self.children = fetchedChildren
+                    self.currentParent?.children = fetchedChildren
+                    self.objectWillChange.send()
+                }
+                
+                print("✅ Parent data refreshed from Firestore")
+            }
+        } catch {
+            print("❌ Error refreshing parent data: \(error)")
         }
     }
     
@@ -627,6 +698,10 @@ class AuthService: ObservableObject {
         // Check if this is a parent or child user
         if user.email?.contains("@parent") == true {
             // This is a parent user
+            // Clear any cached data first to prevent stale data
+            children.removeAll()
+            currentParent = nil
+            
             loadParentData(userId: user.uid)
             setupRealTimeListeners() // Setup real-time listeners for parent
             

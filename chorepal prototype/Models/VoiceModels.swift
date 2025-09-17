@@ -52,6 +52,16 @@ struct ParseResult: Codable {
     let details: String?
 }
 
+// MARK: - Standardized Voice Response
+struct VoiceResponse: Codable {
+    let needsFollowup: Bool
+    let missing: [String]?
+    let question: String?
+    let result: TaskFields?
+    let speak: String
+    let sessionId: String?
+}
+
 struct ParseError: Codable {
     let error: String
     let details: String
@@ -75,6 +85,8 @@ struct ParseRequest: Codable {
     let transcript: String
     let children: [VoiceChild]
     let currentDate: String?
+    let conversationContext: String?
+    let sessionId: String?
 }
 
 // MARK: - Chat Message Types

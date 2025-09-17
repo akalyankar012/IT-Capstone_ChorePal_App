@@ -11,6 +11,11 @@ class SpeechBack: NSObject, ObservableObject {
     private let synthesizer = AVSpeechSynthesizer()
     private var currentUtterance: AVSpeechUtterance?
     
+    // Voice configuration - Jarvis-style settings
+    private let voiceLanguage = "en-GB" // British sophistication
+    private let speechRate: Float = 0.5  // Deliberate pace
+    private let speechPitch: Float = 0.8 // Lower, authoritative tone
+    
     override init() {
         super.init()
         synthesizer.delegate = self
@@ -31,7 +36,7 @@ class SpeechBack: NSObject, ObservableObject {
     
     // MARK: - Speech Control
     
-    func speak(_ text: String, rate: Float = 0.5, pitch: Float = 1.0) {
+    func speak(_ text: String, rate: Float? = nil, pitch: Float? = nil) {
         guard !text.isEmpty else { return }
         
         // Stop any current speech
@@ -39,12 +44,12 @@ class SpeechBack: NSObject, ObservableObject {
         
         // Create utterance
         let utterance = AVSpeechUtterance(string: text)
-        utterance.rate = rate
-        utterance.pitchMultiplier = pitch
+        utterance.rate = rate ?? speechRate
+        utterance.pitchMultiplier = pitch ?? speechPitch
         utterance.volume = 1.0
         
-        // Use a natural voice if available
-        if let voice = AVSpeechSynthesisVoice(language: "en-US") {
+        // Use configured voice
+        if let voice = AVSpeechSynthesisVoice(language: voiceLanguage) {
             utterance.voice = voice
         }
         
@@ -92,6 +97,24 @@ class SpeechBack: NSObject, ObservableObject {
     
     func speakError(_ message: String) {
         speak("Sorry, there was an error: \(message)")
+    }
+    
+    // MARK: - Voice Selection
+    
+    func getAvailableVoices() -> [AVSpeechSynthesisVoice] {
+        return AVSpeechSynthesisVoice.speechVoices()
+    }
+    
+    func getEnglishVoices() -> [AVSpeechSynthesisVoice] {
+        return AVSpeechSynthesisVoice.speechVoices().filter { voice in
+            voice.language.hasPrefix("en")
+        }
+    }
+    
+    func setVoice(language: String) {
+        // This would be used to change the voice at runtime
+        // For now, we'll use the configured voice
+        print("🎤 Voice set to: \(language)")
     }
     
     // MARK: - Date Formatting

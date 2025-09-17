@@ -60,9 +60,10 @@ class VoiceService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         
-        if !phraseHints.isEmpty {
-            request.setValue(phraseHints.joined(separator: ","), forHTTPHeaderField: "x-phrase-hints")
-        }
+        // Add common chore-related phrase hints for better accuracy
+        let defaultHints = ["make", "create", "assign", "task", "chore", "clean", "wash", "dishes", "room", "bed", "trash", "points", "tomorrow", "today", "Friday", "child", "children", "worth", "should", "be", "completed", "when", "who", "what", "how", "many", "name", "person"]
+        let allHints = phraseHints + defaultHints
+        request.setValue(allHints.joined(separator: ","), forHTTPHeaderField: "x-phrase-hints")
         
         request.httpBody = body
         
@@ -86,7 +87,7 @@ class VoiceService: ObservableObject {
     
     // MARK: - Parse Transcript
     
-    func parseTranscript(_ transcript: String, children: [VoiceChild]) async throws -> ParseResult {
+    func parseTranscript(_ transcript: String, children: [VoiceChild], sessionId: String? = nil, context: String? = nil) async throws -> VoiceResponse {
         isLoading = true
         defer { isLoading = false }
         
@@ -97,7 +98,9 @@ class VoiceService: ObservableObject {
         let parseRequest = ParseRequest(
             transcript: transcript,
             children: children,
-            currentDate: ISO8601DateFormatter().string(from: Date())
+            currentDate: ISO8601DateFormatter().string(from: Date()),
+            conversationContext: context,
+            sessionId: sessionId
         )
         
         var request = URLRequest(url: url)
@@ -124,21 +127,21 @@ class VoiceService: ObservableObject {
             throw VoiceError.parsingFailed
         }
         
-        let parseResult = try JSONDecoder().decode(ParseResult.self, from: data)
-        print("✅ Parse result: \(parseResult)")
-        return parseResult
+        let voiceResponse = try JSONDecoder().decode(VoiceResponse.self, from: data)
+        print("✅ Voice response: \(voiceResponse)")
+        return voiceResponse
     }
     
     // MARK: - Complete Voice Flow
     
-    func processVoiceCommand(audioData: Data, children: [VoiceChild], phraseHints: [String] = []) async throws -> ParseResult {
+    func processVoiceCommand(audioData: Data, children: [VoiceChild], sessionId: String? = nil, phraseHints: [String] = []) async throws -> VoiceResponse {
         // Step 1: Convert speech to text
         let transcript = try await uploadSTT(audioData: audioData, phraseHints: phraseHints)
         
         // Step 2: Parse transcript
-        let parseResult = try await parseTranscript(transcript, children: children)
+        let voiceResponse = try await parseTranscript(transcript, children: children, sessionId: sessionId, context: nil)
         
-        return parseResult
+        return voiceResponse
     }
 }
 

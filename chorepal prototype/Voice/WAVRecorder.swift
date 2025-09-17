@@ -30,7 +30,7 @@ class WAVRecorder: NSObject, ObservableObject {
     }
     
     deinit {
-        stopRecording()
+        _ = stopRecording()
     }
     
     // MARK: - Audio Session Setup
