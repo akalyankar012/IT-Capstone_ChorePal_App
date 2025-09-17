@@ -19,3 +19,4 @@ echo ""
 echo "Alternatively, you can add this to the project's Info.plist:"
 echo "<key>NSMicrophoneUsageDescription</key>"
 echo "<string>This app uses the microphone to record voice commands for creating chores and tasks. Your voice is processed to understand chore assignments and converted to text for task creation.</string>"
+

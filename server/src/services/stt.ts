@@ -51,10 +51,11 @@ export async function speechToText(request: STTRequest): Promise<STTResponse> {
     }
 
     console.log('✅ Transcript:', transcript);
-    return { text: transcript };
+    return { transcript: transcript };
 
   } catch (error) {
     console.error('❌ Speech-to-Text error:', error);
     throw new Error(`Speech-to-Text failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
+

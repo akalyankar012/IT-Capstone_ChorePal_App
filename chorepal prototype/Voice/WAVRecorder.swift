@@ -86,7 +86,7 @@ class WAVRecorder: NSObject, ObservableObject {
         stopTimer()
         
         let recordedURL = recordingURL
-        recordingURL = nil
+        // Don't set recordingURL = nil here, keep it for getRecordingData()
         
         print("🛑 Stopped recording")
         return recordedURL
@@ -128,6 +128,10 @@ class WAVRecorder: NSObject, ObservableObject {
         }
         recordingURL = nil
     }
+    
+    func clearRecordingURL() {
+        recordingURL = nil
+    }
 }
 
 // MARK: - AVAudioRecorderDelegate
@@ -145,3 +149,4 @@ extension WAVRecorder: AVAudioRecorderDelegate {
         self.error = .recordingFailed
     }
 }
+

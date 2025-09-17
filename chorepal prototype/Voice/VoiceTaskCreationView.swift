@@ -226,6 +226,22 @@ struct VoiceTaskCreationView: View {
         recordingAnimation = false
         isProcessing = true
         
+        // Check minimum recording duration (at least 1 second)
+        if wavRecorder.recordingDuration < 1.0 {
+            DispatchQueue.main.async {
+                self.isProcessing = false
+                // Remove recording placeholder
+                if let lastMessage = self.chatMessages.last, lastMessage.isProcessing {
+                    self.chatMessages.removeLast()
+                }
+                // Add AI message instead of modal
+                let aiMessage = ChatMessage(text: "Please record for at least 1 second. Try speaking longer.", isUser: false)
+                self.chatMessages.append(aiMessage)
+                self.speechBack.speak("Please record for at least 1 second. Try speaking longer.")
+            }
+            return
+        }
+        
         // Remove recording placeholder and add processing message
         if let lastMessage = chatMessages.last, lastMessage.isProcessing {
             chatMessages.removeLast()
@@ -236,6 +252,8 @@ struct VoiceTaskCreationView: View {
         
         if wavRecorder.stopRecording() != nil {
             if let audioData = wavRecorder.getRecordingData() {
+                print("🎤 Recording completed - Duration: \(wavRecorder.recordingDuration)s, Size: \(audioData.count) bytes")
+                wavRecorder.clearRecordingURL() // Clear the URL after getting data
                 processAudio(audioData)
             } else {
                 DispatchQueue.main.async {
@@ -309,7 +327,10 @@ struct VoiceTaskCreationView: View {
     
     // MARK: - Parse Result Handling
     private func handleParseResult(_ result: ParseResult) {
+        print("🔍 Parse result: \(result)")
+        
         if let error = result.error {
+            print("❌ Parse error: \(error)")
             let errorMessage = ChatMessage(text: "❌ Error: \(error)", isUser: false)
             chatMessages.append(errorMessage)
             speechBack.speak("Sorry, there was an error processing your request.")
@@ -317,6 +338,7 @@ struct VoiceTaskCreationView: View {
         }
         
         if result.needsFollowup {
+            print("🤖 Needs follow-up: \(result.question ?? "No question")")
             // Ask follow-up question
             if let question = result.question {
                 let aiMessage = ChatMessage(text: "🤖 \(question)", isUser: false)
@@ -325,8 +347,14 @@ struct VoiceTaskCreationView: View {
                 conversationStep = 1
             }
         } else if let taskFields = result.result {
+            print("✅ Creating chore: \(taskFields)")
             // Create the chore
             createChore(from: taskFields)
+        } else {
+            print("❌ No task fields in result")
+            let errorMessage = ChatMessage(text: "❌ Could not extract task information", isUser: false)
+            chatMessages.append(errorMessage)
+            speechBack.speak("Sorry, I couldn't understand what task you want to create.")
         }
     }
     

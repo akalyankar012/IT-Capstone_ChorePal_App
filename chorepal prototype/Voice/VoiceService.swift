@@ -43,15 +43,28 @@ class VoiceService: ObservableObject {
             throw VoiceError.networkError
         }
         
+        // Create multipart form data
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = Data()
+        
+        // Add audio file
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"audio\"; filename=\"audio.wav\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
+        print("DEBUG: Audio data size in VoiceService before sending: \(audioData.count) bytes")
+        body.append(audioData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("audio/wav", forHTTPHeaderField: "Content-Type")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         
         if !phraseHints.isEmpty {
             request.setValue(phraseHints.joined(separator: ","), forHTTPHeaderField: "x-phrase-hints")
         }
         
-        request.httpBody = audioData
+        request.httpBody = body
         
         print("🎤 Uploading audio to STT endpoint...")
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -137,3 +150,4 @@ struct HealthResponse: Codable {
     let project: String?
     let region: String?
 }
+

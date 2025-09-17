@@ -39,7 +39,7 @@ export interface STTRequest {
 }
 
 export interface STTResponse {
-  text: string;
+  transcript: string;
 }
 
 export interface ParseRequest {

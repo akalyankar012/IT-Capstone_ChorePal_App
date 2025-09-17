@@ -139,3 +139,4 @@ extension SpeechBack: AVSpeechSynthesizerDelegate {
         // Optional: Handle word highlighting or other visual feedback
     }
 }
+
