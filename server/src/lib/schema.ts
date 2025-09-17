@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const TaskFieldsSchema = z.object({
   childId: z.string().min(1, 'Child ID is required'),
   title: z.string().min(1, 'Title is required'),
-  dueAt: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/, 'Invalid ISO date format'),
+  dueAt: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}(Z|[+-]\d{2}:\d{2})$/, 'Invalid ISO date format'),
   points: z.number().int().min(1, 'Points must be a positive integer')
 });
 

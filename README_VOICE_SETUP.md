@@ -8,8 +8,10 @@ This guide will help you set up the end-to-end voice task creation feature for C
 iOS App (SwiftUI) → Node.js Server → Google Cloud APIs
      ↓                    ↓              ↓
 WAV Recording    →  Express Server  →  Speech-to-Text
-AVSpeechSynthesizer →  Voice Routes  →  Vertex AI Gemini
+AVSpeechSynthesizer →  Voice Routes  →  Google AI Studio (Gemini)
 ```
+
+**Note**: We now use **Google AI Studio** (API key) instead of Vertex AI to avoid 404 issues. AI Studio is billed separately from your $300 GCP credits.
 
 ## 📁 File Structure
 
@@ -51,8 +53,10 @@ cd server
 npm install
 
 # Set up environment
-cp env.example .env
-# Edit .env with your GCP project details
+cp .env.example .env
+# Edit .env with your API keys:
+# - GOOGLE_AI_STUDIO_API_KEY (from AI Studio)
+# - GOOGLE_APPLICATION_CREDENTIALS (for Speech-to-Text)
 
 # Start development server
 npm run dev
@@ -60,13 +64,20 @@ npm run dev
 
 ### 2. Google Cloud Setup
 
+#### A. Speech-to-Text (Required)
 Follow the detailed guide in `server/gcp/README.md`:
 
 1. Enable Speech-to-Text API
-2. Enable Vertex AI API  
-3. Create service account with required roles
-4. Download JSON key as `gcp-sa.json`
-5. Set `GOOGLE_APPLICATION_CREDENTIALS` environment variable
+2. Create service account with required roles
+3. Download JSON key as `gcp-sa.json`
+4. Set `GOOGLE_APPLICATION_CREDENTIALS` environment variable
+
+#### B. Google AI Studio (Required)
+1. Go to [Google AI Studio](https://aistudio.google.com/u/1/apikey?pli=1)
+2. Create an API key
+3. Copy the key to your `.env` file as `GOOGLE_AI_STUDIO_API_KEY`
+
+**Important**: AI Studio is billed separately from your $300 GCP credits. Costs are very low (pennies per 1,000 requests).
 
 ### 3. iOS Integration
 
@@ -114,6 +125,34 @@ curl -X POST http://localhost:3000/voice/parse \
       {"id": "2", "name": "Zayn"}
     ]
   }'
+```
+
+### Direct Gemini Test
+
+```bash
+# Test Gemini directly with JSON enforcement
+curl -X POST http://localhost:3000/test/gemini \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "Make dishes for Emma tomorrow worth 20 points",
+    "children": [
+      {"id": "1", "name": "Emma"},
+      {"id": "2", "name": "Zayn"}
+    ]
+  }'
+```
+
+Expected response:
+```json
+{
+  "needsFollowup": false,
+  "result": {
+    "childId": "1",
+    "title": "Make dishes",
+    "dueAt": "2024-01-16T18:00:00.000-05:00",
+    "points": 20
+  }
+}
 ```
 
 ## 📱 iOS Testing
@@ -199,16 +238,18 @@ curl -v http://localhost:3000/health
 
 ## 💰 Cost Monitoring
 
-- **Speech-to-Text**: ~$0.006 per 15 seconds
-- **Vertex AI Gemini**: ~$0.000075 per 1K characters
+- **Speech-to-Text**: ~$0.006 per 15 seconds (uses GCP credits)
+- **Google AI Studio Gemini**: ~$0.000075 per 1K characters (separate billing)
 - **Estimated monthly cost**: $5-15 for moderate usage
+- **AI Studio costs**: Extremely low (pennies per 1,000 requests)
 
 ## 🔒 Security Notes
 
-- Never commit `gcp-sa.json` to version control
-- Use environment variables for credentials
+- Never commit `gcp-sa.json` or API keys to version control
+- Use environment variables for all credentials
 - Monitor API usage and costs
-- Rotate service account keys regularly
+- Rotate service account keys and API keys regularly
+- AI Studio API keys are separate from GCP credentials
 
 ## 📞 Support
 

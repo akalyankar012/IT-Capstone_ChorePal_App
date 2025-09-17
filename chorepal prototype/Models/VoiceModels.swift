@@ -1,16 +1,45 @@
 import Foundation
 
 // MARK: - Voice Task Models
+// Note: Child type is already defined in Models.swift
 
-struct VoiceChild: Codable, Identifiable {
-    let id: String
-    let name: String
+// MARK: - Voice Error Types
+enum VoiceError: Error, LocalizedError {
+    case networkError
+    case serverError(String)
+    case parsingError
+    case recordingError
+    case permissionDenied
+    case uploadFailed
+    case parsingFailed
+    case recordingFailed
+    
+    var errorDescription: String? {
+        switch self {
+        case .networkError:
+            return "Network connection failed"
+        case .serverError(let message):
+            return "Server error: \(message)"
+        case .parsingError:
+            return "Failed to parse response"
+        case .recordingError:
+            return "Audio recording failed"
+        case .permissionDenied:
+            return "Microphone permission denied"
+        case .uploadFailed:
+            return "Audio upload failed"
+        case .parsingFailed:
+            return "Transcript parsing failed"
+        case .recordingFailed:
+            return "Audio recording failed"
+        }
+    }
 }
 
 struct TaskFields: Codable {
     let childId: String
     let title: String
-    let dueAt: String // ISO 8601 format
+    let dueAt: String
     let points: Int
 }
 
@@ -19,106 +48,47 @@ struct ParseResult: Codable {
     let missing: [String]?
     let question: String?
     let result: TaskFields?
-    
-    init(needsFollowup: Bool, missing: [String]? = nil, question: String? = nil, result: TaskFields? = nil) {
-        self.needsFollowup = needsFollowup
-        self.missing = missing
-        self.question = question
-        self.result = result
-    }
+    let error: String?
+    let details: String?
 }
 
-// MARK: - API Request/Response Models
+struct ParseError: Codable {
+    let error: String
+    let details: String
+}
 
-struct STTRequest {
-    let audio: Data
-    let phraseHints: [String]
+// MARK: - Additional Voice Types
+struct VoiceChild: Codable {
+    let id: String
+    let name: String
 }
 
 struct STTResponse: Codable {
-    let text: String
+    let transcript: String
+    
+    var text: String {
+        return transcript
+    }
 }
 
 struct ParseRequest: Codable {
     let transcript: String
     let children: [VoiceChild]
     let currentDate: String?
-    
-    init(transcript: String, children: [VoiceChild], currentDate: String? = nil) {
-        self.transcript = transcript
-        self.children = children
-        self.currentDate = currentDate
-    }
 }
 
-// MARK: - Voice Configuration
-
-struct VoiceConfig {
-    static let shared = VoiceConfig()
+// MARK: - Chat Message Types
+struct ChatMessage: Identifiable {
+    let id = UUID()
+    let text: String
+    let isUser: Bool
+    let timestamp: Date
+    let isProcessing: Bool
     
-    // Server configuration
-    let apiBaseURL: String
-    let sttEndpoint: String
-    let parseEndpoint: String
-    
-    // Audio configuration
-    let sampleRate: Double = 16000.0
-    let channels: UInt32 = 1
-    let bitDepth: UInt32 = 16
-    
-    private init() {
-        // Use LAN IP when testing on device, localhost for simulator
-        #if targetEnvironment(simulator)
-        self.apiBaseURL = "http://localhost:3000"
-        #else
-        // Replace with your Mac's LAN IP when testing on device
-        self.apiBaseURL = "http://192.168.1.100:3000" // Update this IP
-        #endif
-        
-        self.sttEndpoint = "\(apiBaseURL)/voice/stt"
-        self.parseEndpoint = "\(apiBaseURL)/voice/parse"
-    }
-    
-    func updateAPIBaseURL(_ newURL: String) -> VoiceConfig {
-        return VoiceConfig(apiBaseURL: newURL)
-    }
-    
-    private init(apiBaseURL: String) {
-        self.apiBaseURL = apiBaseURL
-        self.sttEndpoint = "\(apiBaseURL)/voice/stt"
-        self.parseEndpoint = "\(apiBaseURL)/voice/parse"
-    }
-}
-
-// MARK: - Voice State
-
-enum VoiceState {
-    case idle
-    case recording
-    case processing
-    case speaking
-    case error(String)
-}
-
-enum VoiceError: LocalizedError {
-    case recordingFailed
-    case uploadFailed
-    case parsingFailed
-    case networkError
-    case invalidResponse
-    
-    var errorDescription: String? {
-        switch self {
-        case .recordingFailed:
-            return "Failed to record audio"
-        case .uploadFailed:
-            return "Failed to upload audio to server"
-        case .parsingFailed:
-            return "Failed to parse voice command"
-        case .networkError:
-            return "Network connection error"
-        case .invalidResponse:
-            return "Invalid response from server"
-        }
+    init(text: String, isUser: Bool, isProcessing: Bool = false) {
+        self.text = text
+        self.isUser = isUser
+        self.timestamp = Date()
+        self.isProcessing = isProcessing
     }
 }

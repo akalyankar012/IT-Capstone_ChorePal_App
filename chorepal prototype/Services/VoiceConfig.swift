@@ -1,45 +1,40 @@
 import Foundation
+import Combine
+
+// MARK: - Voice Configuration
+struct VoiceConfig {
+    static let apiBaseURL = "http://localhost:3000"
+}
 
 // MARK: - Voice Configuration Service
-
 class VoiceConfigService: ObservableObject {
     static let shared = VoiceConfigService()
     
-    @Published var apiBaseURL: String
-    @Published var isConfigured: Bool = false
+    @Published var apiBaseURL = "http://localhost:3000"
     
-    private init() {
-        // Default configuration
-        #if targetEnvironment(simulator)
-        self.apiBaseURL = "http://localhost:3000"
-        #else
-        // Default LAN IP - user should update this
-        self.apiBaseURL = "http://192.168.1.100:3000"
-        #endif
-    }
-    
-    func updateAPIBaseURL(_ newURL: String) {
-        self.apiBaseURL = newURL
-        self.isConfigured = true
-        UserDefaults.standard.set(newURL, forKey: "VoiceAPIBaseURL")
-    }
-    
-    func loadSavedConfiguration() {
-        if let savedURL = UserDefaults.standard.string(forKey: "VoiceAPIBaseURL") {
-            self.apiBaseURL = savedURL
-            self.isConfigured = true
-        }
+    var healthEndpoint: String {
+        "\(apiBaseURL)/health"
     }
     
     var sttEndpoint: String {
-        return "\(apiBaseURL)/voice/stt"
+        "\(apiBaseURL)/voice/stt"
     }
     
     var parseEndpoint: String {
-        return "\(apiBaseURL)/voice/parse"
+        "\(apiBaseURL)/voice/parse"
     }
     
-    var healthEndpoint: String {
-        return "\(apiBaseURL)/health"
+    private init() {}
+    
+    func loadSavedConfiguration() {
+        // Load from UserDefaults or other storage if needed
+        if let savedURL = UserDefaults.standard.string(forKey: "voice_api_base_url") {
+            apiBaseURL = savedURL
+        }
+    }
+    
+    func updateBaseURL(_ newURL: String) {
+        apiBaseURL = newURL
+        UserDefaults.standard.set(newURL, forKey: "voice_api_base_url")
     }
 }

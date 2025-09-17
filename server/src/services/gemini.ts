@@ -1,13 +1,57 @@
-import { VertexAI } from '@google-cloud/vertexai';
+import fetch from "node-fetch";
 import { ParseRequest, ParseResponse, ParseResultSchema, TaskFieldsSchema } from '../lib/schema';
 import { parseRelativeDate, getCurrentDateISO } from '../lib/time';
 import { findBestChildMatch, generateChildFollowUpQuestion } from '../lib/fuzzy';
 
-const projectId = process.env.GCP_PROJECT_ID || 'chorepal-ios-app-472321';
-const location = process.env.GCP_REGION || 'us-central1';
+// Load environment variables first
+require('dotenv').config();
 
-const vertexAI = new VertexAI({ project: projectId, location: location });
-const model = 'gemini-1.5-flash';
+const MODEL = (process.env.GEMINI_MODEL || "gemini-2.0-flash").trim();
+const API_KEY = (process.env.GOOGLE_AI_STUDIO_API_KEY || "").trim();
+
+if (!API_KEY) {
+  console.warn("[Gemini] GOOGLE_AI_STUDIO_API_KEY is not set. Calls will fail until provided.");
+}
+
+console.log('🔧 AI Studio Configuration:');
+console.log(`   Model: ${MODEL}`);
+console.log(`   API Key: ${API_KEY ? 'Set' : 'Not set'}`);
+
+/**
+ * Call Google AI Studio Gemini API with strict JSON response
+ */
+export async function geminiParseStrictJSON(system: string, user: string): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
+  const body = {
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: "user", parts: [{ text: user }] }],
+    generationConfig: {
+      responseMimeType: "application/json", // force JSON
+      temperature: 0.2,
+      maxOutputTokens: 512
+    }
+  };
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`AI Studio error ${res.status}: ${text}`);
+  }
+
+  const data = await res.json();
+  const out =
+    data?.candidates?.[0]?.content?.parts?.[0]?.text ??
+    data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ??
+    "";
+
+  if (!out) throw new Error("AI Studio returned empty response");
+  return out;
+}
 
 /**
  * Parse transcript using Gemini to extract task fields
@@ -41,25 +85,18 @@ RESPONSE FORMATS:
 
 Extract the task information. If anything is missing or unclear, ask ONE specific question.`;
 
-    const generativeModel = vertexAI.getGenerativeModel({ model });
+    // Call AI Studio with strict JSON
+    const jsonResponse = await geminiParseStrictJSON(systemPrompt, userPrompt);
     
-    const result = await generativeModel.generateContent([
-      { role: 'user', parts: [{ text: systemPrompt }] },
-      { role: 'user', parts: [{ text: userPrompt }] }
-    ]);
-
-    const response = await result.response;
-    const text = response.text();
-    
-    console.log('🤖 Gemini response:', text);
+    console.log('🤖 AI Studio response:', jsonResponse);
     
     // Parse JSON response
     let parsedResponse;
     try {
-      parsedResponse = JSON.parse(text);
+      parsedResponse = JSON.parse(jsonResponse);
     } catch (parseError) {
-      console.error('❌ Failed to parse Gemini JSON:', parseError);
-      throw new Error('Invalid JSON response from Gemini');
+      console.error('❌ Failed to parse AI Studio JSON:', parseError);
+      throw new Error('Invalid JSON response from AI Studio');
     }
     
     // Validate with Zod schema
@@ -94,7 +131,7 @@ Extract the task information. If anything is missing or unclear, ask ONE specifi
     return validatedResponse;
 
   } catch (error) {
-    console.error('❌ Gemini parsing error:', error);
-    throw new Error(`Gemini parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('❌ AI Studio parsing error:', error);
+    throw new Error(`AI Studio parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

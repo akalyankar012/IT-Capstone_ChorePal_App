@@ -358,6 +358,7 @@ struct QuickActionsSection: View {
     @State private var showingChoreManagement = false
     @State private var showingRewardManagement = false
     @State private var showingStatistics = false
+    @State private var showingVoiceTasks = false
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -385,7 +386,13 @@ struct QuickActionsSection: View {
                     showingChoreManagement = true
                 }
                 
-
+                QuickActionCard(
+                    title: "Voice Tasks",
+                    icon: "mic.fill",
+                    color: .blue
+                ) {
+                    showingVoiceTasks = true
+                }
                 
                 QuickActionCard(
                     title: "Manage Rewards",
@@ -418,6 +425,12 @@ struct QuickActionsSection: View {
             StatisticsView(
                 choreService: choreService,
                 rewardService: rewardService,
+                authService: authService
+            )
+        }
+        .fullScreenCover(isPresented: $showingVoiceTasks) {
+            VoiceTaskCreationView(
+                choreService: choreService,
                 authService: authService
             )
         }
