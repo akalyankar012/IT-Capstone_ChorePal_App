@@ -31,6 +31,8 @@ EXAMPLES:
 - "50 points" → {"intent": "answer", "slot_updates": {"points": 50}}
 - "Create task for Emma, due tomorrow, worth 50 points" → {"intent": "answer", "slot_updates": {"assignedChildName": "Emma", "dueText": "tomorrow", "points": 50}}
 
+IMPORTANT: If the user repeats the AI's question (like "What task should I create?"), treat it as a question and return intent: "noop" with empty slot_updates.
+
 RESPONSE FORMAT:
 {
   "intent": "answer|revise|new_task|cancel|noop",

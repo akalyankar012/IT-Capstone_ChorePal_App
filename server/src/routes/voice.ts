@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { speechToText } from '../services/stt';
+import { speechToText } from '../services/whisperSTT';
 import { voiceSessionStore } from '../services/VoiceSessionStore';
 import { voiceExtractor } from '../services/VoiceExtractor';
 import { voiceMergeLogic } from '../services/VoiceMergeLogic';
