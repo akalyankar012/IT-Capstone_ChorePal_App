@@ -85,11 +85,8 @@ export class DateNormalizer {
           const time = this.extractTime(dueText) || '18:00';
           const [hours, minutes] = time.split(':').map(Number);
           
-          // Create date in local timezone, then convert to UTC for storage
-          const dueDate = new Date(now.getFullYear(), i, day, hours, minutes, 0, 0);
-          // Ensure we're working with the correct timezone
-          const timezoneOffset = now.getTimezoneOffset();
-          const utcDate = new Date(dueDate.getTime() - (timezoneOffset * 60000));
+          // Create date directly in UTC to avoid timezone conversion issues
+          const dueDate = new Date(Date.UTC(now.getFullYear(), i, day, hours, minutes, 0, 0));
           
           console.log(`🗓️ Month name parsing:`, {
             input: dueText,
@@ -98,11 +95,11 @@ export class DateNormalizer {
             time,
             hours,
             minutes,
-            dueDate: utcDate.toISOString(),
+            dueDate: dueDate.toISOString(),
             localDate: dueDate.toLocaleString()
           });
           
-          return utcDate.toISOString();
+          return dueDate.toISOString();
         }
       }
     }
@@ -147,6 +144,7 @@ export class DateNormalizer {
     const timePatterns = [
       /(\d{1,2})\.(\d{2})\s*(am|pm|a\.m\.|p\.m\.|a\.m|p\.m)/i,  // Decimal time first: "10.09 p.m."
       /(\d{1,2}):(\d{2})\s*(am|pm)?/i,                        // Standard time: "11:30 am"
+      /(\d{1,2})\s+(\d{1,2})\s*(am|pm|a\.m\.|p\.m\.|a\.m|p\.m)/i, // Space separated: "5 10 p.m." or "5 10 pm"
       /(\d{1,2})\s*(am|pm)/i,                                 // Simple time: "11 am"
       /(\d{1,2})\s*(a\.m\.|p\.m\.)/i,                         // Dotted time: "11 a.m."
       /(\d{1,2})\s*(a\.m|p\.m)/i                             // Partial dotted: "11 a.m"
@@ -162,7 +160,7 @@ export class DateNormalizer {
         
         // Handle different regex patterns
         if (match[2] && !isNaN(parseInt(match[2]))) {
-          // Pattern with minutes: "11:30 am" or "10.09 p.m."
+          // Pattern with minutes: "11:30 am", "10.09 p.m.", or "5 10 p.m."
           minutes = parseInt(match[2]);
           ampm = match[3]?.toLowerCase().replace(/\./g, '') || '';
         } else {
