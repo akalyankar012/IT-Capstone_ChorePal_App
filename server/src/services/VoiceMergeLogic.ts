@@ -5,43 +5,67 @@ export class VoiceMergeLogic {
   private readonly SLOT_ORDER = ['assignedChild', 'title', 'due', 'points'];
 
   mergeSlotUpdates(session: VoiceSession, delta: SlotDelta): VoiceSession {
-    console.log('Merging slot updates:', delta);
-    console.log('Current session slots:', session.slots);
+    console.log('🔄 Smart merge:', delta.slot_updates);
     
     const updatedSlots = { ...session.slots };
     
-    // Merge slot updates
-    Object.entries(delta.slot_updates).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        console.log(`Setting ${key} to ${value}`);
-        (updatedSlots as any)[key] = value;
-      }
-    });
+    // Smart merge - copy updates and handle special cases
+    Object.assign(updatedSlots, delta.slot_updates);
 
-    // Handle child name to ID mapping
+    // Map child name to ID if needed
     if (updatedSlots.assignedChildName && !updatedSlots.assignedChildId) {
       const child = session.childrenRoster.find(c => 
         c.name.toLowerCase() === updatedSlots.assignedChildName!.toLowerCase()
       );
       if (child) {
-        console.log(`Mapped child name ${updatedSlots.assignedChildName} to ID ${child.id}`);
         updatedSlots.assignedChildId = child.id;
-      } else {
-        console.log(`Could not find child with name ${updatedSlots.assignedChildName} in roster`);
       }
     }
 
-    // Recompute missing slots
-    const missing = this.computeMissingSlots(updatedSlots);
+        // Smart missing field detection
+        const missing: string[] = [];
+        
+        // Check for assigned child - handle both known and unknown children
+        if (!updatedSlots.assignedChildId && !updatedSlots.assignedChildName) {
+            missing.push('assignedChild');
+        } else if (updatedSlots.assignedChildName && !updatedSlots.assignedChildId) {
+            // Check if the mentioned child exists in the roster
+            const childExists = session.childrenRoster.some(c => 
+                c.name.toLowerCase() === updatedSlots.assignedChildName!.toLowerCase()
+            );
+            
+            if (!childExists) {
+                // Unknown child - we'll handle this in the response
+                console.log(`⚠️ Unknown child mentioned: ${updatedSlots.assignedChildName}`);
+                // Don't add to missing, but we'll need to handle this in the response
+            }
+        }
     
-    // Determine next expected slot
-    const expectedSlot = this.getNextExpectedSlot(missing, delta.ambiguous);
+    // Check for title - use default "task" if not specified in complete commands
+    if (!updatedSlots.title) {
+      // If this is a complete command with child but no title, use default
+      if (delta.intent === 'new_task' && updatedSlots.assignedChildId && !updatedSlots.title) {
+        updatedSlots.title = 'task';
+      } else {
+        missing.push('title');
+      }
+    }
+    
+    // Check for due date
+    if (!updatedSlots.dueIso && !updatedSlots.dueText) {
+      missing.push('due');
+    }
+    
+    // Check for points
+    if (!updatedSlots.points) {
+      missing.push('points');
+    }
 
     return {
       ...session,
       slots: updatedSlots,
       missing,
-      expectedSlot,
+      expectedSlot: (missing[0] as any) || undefined,
       status: missing.length === 0 ? 'ready_to_create' : 'in_progress'
     };
   }
@@ -82,68 +106,80 @@ export class VoiceMergeLogic {
     return undefined;
   }
 
-  generateResponse(session: VoiceSession, delta: SlotDelta): VoiceResponse {
-    // Handle cancellation
-    if (delta.intent === 'cancel') {
-      return {
-        type: 'cancelled',
-        speak: 'Task creation cancelled.',
-        sessionId: session.sessionId
-      };
-    }
+        generateResponse(session: VoiceSession, delta: SlotDelta): VoiceResponse {
+        console.log('🎯 Smart response for:', session.missing);
+        
+        // Check for unknown child
+        if (session.slots.assignedChildName && !session.slots.assignedChildId) {
+            const childExists = session.childrenRoster.some(c => 
+                c.name.toLowerCase() === session.slots.assignedChildName!.toLowerCase()
+            );
+            
+            if (!childExists) {
+                const availableChildren = session.childrenRoster.map(c => c.name).join(', ');
+                return {
+                    type: 'followup',
+                    speak: `I don't recognize "${session.slots.assignedChildName}". Available children are: ${availableChildren}. Who should I assign this to?`,
+                    sessionId: session.sessionId
+                };
+            }
+        }
+        
+        // Task is complete
+        if (session.missing.length === 0) {
+            const childName = session.childrenRoster.find(c => c.id === session.slots.assignedChildId)?.name || 'Unknown';
+            const dueText = this.formatDueDate(session.slots.dueIso, session.slots.dueText);
+            return {
+                type: 'confirmed',
+                speak: `Added "${session.slots.title}" for ${childName}, due ${dueText}, for ${session.slots.points} points.`,
+                parsed: {
+                    childId: session.slots.assignedChildId,
+                    title: session.slots.title,
+                    dueAt: session.slots.dueIso ? new Date(session.slots.dueIso).getTime().toString() : "0", // Send Unix timestamp as string
+                    points: session.slots.points
+                },
+                sessionId: session.sessionId
+            };
+        }
 
-    // Handle ambiguous cases
-    if (delta.ambiguous && delta.ambiguous.length > 0) {
-      const ambiguousSlot = delta.ambiguous[0];
-      let speak = '';
-      
-      if (ambiguousSlot === 'assignedChild') {
-        const matchingChildren = session.childrenRoster.filter(c => 
-          c.name.toLowerCase().includes(delta.slot_updates.assignedChildName?.toLowerCase() || '')
-        );
-        const names = matchingChildren.map(c => c.name).join(', ');
-        speak = `Which child: ${names}?`;
-      }
-      
-      return {
-        type: 'ambiguous',
-        speak,
-        sessionId: session.sessionId
-      };
+        // Ask for missing info with context
+        const missing = session.missing[0];
+        let question = '';
+    
+    if (missing === 'assignedChild') {
+      const childNames = session.childrenRoster.map(c => c.name).join(', ');
+      question = `Who should I assign this to? (${childNames})`;
+    } else if (missing === 'title') {
+      question = 'What task should I create?';
+    } else if (missing === 'due') {
+      question = 'When is this due?';
+    } else if (missing === 'points') {
+      question = 'How many points is this worth?';
     }
-
-    // Handle completion
-    if (session.status === 'ready_to_create') {
-      const task = this.formatTaskConfirmation(session);
-      return {
-        type: 'confirmed',
-        speak: task,
-        parsed: {
-          childId: session.slots.assignedChildId,
-          title: session.slots.title,
-          dueAt: session.slots.dueIso,
-          points: session.slots.points
-        },
-        sessionId: session.sessionId
-      };
-    }
-
-    // Handle follow-up questions
-    if (session.expectedSlot) {
-      const question = this.generateFollowUpQuestion(session.expectedSlot);
-      return {
-        type: 'followup',
-        speak: question,
-        sessionId: session.sessionId
-      };
-    }
-
-    // Fallback
+    
     return {
       type: 'followup',
-      speak: 'I need more information to create this task.',
+      speak: question,
       sessionId: session.sessionId
     };
+  }
+
+  private formatDueDate(dueIso?: string, dueText?: string): string {
+    if (dueText) return dueText;
+    if (!dueIso) return 'today';
+    
+    const dueDate = new Date(dueIso);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    
+    if (dueDate.toDateString() === today.toDateString()) {
+      return 'today';
+    } else if (dueDate.toDateString() === tomorrow.toDateString()) {
+      return 'tomorrow';
+    } else {
+      return dueDate.toLocaleDateString();
+    }
   }
 
   private generateFollowUpQuestion(expectedSlot: string): string {

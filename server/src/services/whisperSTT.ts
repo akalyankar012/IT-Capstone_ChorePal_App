@@ -33,7 +33,7 @@ export async function speechToText(request: STTRequest): Promise<STTResponse> {
       throw new Error(`Whisper API failed: ${response.status} - ${errorText}`);
     }
 
-    const result = await response.json();
+    const result = await response.json() as any;
     const transcript = result.text || '';
     
     console.log('✅ Whisper transcript:', transcript);

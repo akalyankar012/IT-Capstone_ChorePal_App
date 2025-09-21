@@ -440,9 +440,10 @@ class AuthService: ObservableObject {
                 }
                 
                 // Update local data
+                let finalChildren = fetchedChildren
                 await MainActor.run {
-                    self.children = fetchedChildren
-                    self.currentParent?.children = fetchedChildren
+                    self.children = finalChildren
+                    self.currentParent?.children = finalChildren
                     self.objectWillChange.send()
                 }
                 

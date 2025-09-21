@@ -24,6 +24,10 @@ class VoiceConfigService: ObservableObject {
         "\(apiBaseURL)/voice/parse"
     }
     
+    var baseURL: String {
+        apiBaseURL
+    }
+    
     private init() {}
     
     func loadSavedConfiguration() {

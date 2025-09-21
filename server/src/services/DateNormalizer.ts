@@ -5,6 +5,10 @@ export class DateNormalizer {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
+    console.log(`🗓️ DateNormalizer input: "${dueText}"`);
+    console.log(`🗓️ Current date: ${now.toISOString()}`);
+    console.log(`🗓️ Today: ${today.toISOString()}`);
+    
     // Handle common relative phrases
     const lowerText = dueText.toLowerCase().trim();
     
@@ -24,6 +28,27 @@ export class DateNormalizer {
       const dueDate = new Date(today);
       dueDate.setDate(dueDate.getDate() + 1);
       dueDate.setHours(hours, minutes, 0, 0);
+      
+      // Debug logging
+      console.log(`🗓️ Tomorrow calculation:`, {
+        input: dueText,
+        extractedTime: time,
+        hours,
+        minutes,
+        dueDate: dueDate.toISOString(),
+        localDate: dueDate.toLocaleString()
+      });
+      
+      // Validate the date
+      if (isNaN(dueDate.getTime())) {
+        console.error(`❌ Invalid date created: ${dueDate}`);
+        // Fallback to tomorrow at 6 PM
+        const fallbackDate = new Date(today);
+        fallbackDate.setDate(fallbackDate.getDate() + 1);
+        fallbackDate.setHours(18, 0, 0, 0);
+        return fallbackDate.toISOString();
+      }
+      
       return dueDate.toISOString();
     }
     
@@ -47,11 +72,46 @@ export class DateNormalizer {
       }
     }
     
+    // Handle "September 18th at 5 p.m." format
+    const monthNames = ['january', 'february', 'march', 'april', 'may', 'june',
+                       'july', 'august', 'september', 'october', 'november', 'december'];
+    
+    for (let i = 0; i < monthNames.length; i++) {
+      const monthName = monthNames[i];
+      if (lowerText.includes(monthName)) {
+        const dayMatch = dueText.match(new RegExp(`${monthName}\\s+(\\d{1,2})(?:st|nd|rd|th)?`, 'i'));
+        if (dayMatch) {
+          const day = parseInt(dayMatch[1]);
+          const time = this.extractTime(dueText) || '18:00';
+          const [hours, minutes] = time.split(':').map(Number);
+          
+          // Create date in local timezone, then convert to UTC for storage
+          const dueDate = new Date(now.getFullYear(), i, day, hours, minutes, 0, 0);
+          // Ensure we're working with the correct timezone
+          const timezoneOffset = now.getTimezoneOffset();
+          const utcDate = new Date(dueDate.getTime() - (timezoneOffset * 60000));
+          
+          console.log(`🗓️ Month name parsing:`, {
+            input: dueText,
+            monthName,
+            day,
+            time,
+            hours,
+            minutes,
+            dueDate: utcDate.toISOString(),
+            localDate: dueDate.toLocaleString()
+          });
+          
+          return utcDate.toISOString();
+        }
+      }
+    }
+    
     // Handle specific dates (basic parsing)
     const dateMatch = dueText.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
     if (dateMatch) {
       const [, month, day, year] = dateMatch;
-      const fullYear = year ? (year.length === 2 ? `20${year}` : year) : now.getFullYear();
+      const fullYear = year ? (year.length === 2 ? `20${year}` : year) : now.getFullYear().toString();
       const time = this.extractTime(dueText) || '18:00';
       const [hours, minutes] = time.split(':').map(Number);
       
@@ -68,19 +128,49 @@ export class DateNormalizer {
   }
   
   private extractTime(text: string): string | null {
-    // Look for time patterns like "5 pm", "17:00", "5:30", etc.
+    const lowerText = text.toLowerCase();
+    
+    console.log(`🕐 Extracting time from: "${text}"`);
+    
+    // Handle special times
+    if (lowerText.includes('midnight')) {
+      console.log(`🕐 Found midnight`);
+      return '00:00';
+    }
+    if (lowerText.includes('noon')) {
+      console.log(`🕐 Found noon`);
+      return '12:00';
+    }
+    
+    // Look for time patterns like "5 pm", "17:00", "5:30", "10.09 p.m.", etc.
+    // Order matters - more specific patterns first
     const timePatterns = [
-      /(\d{1,2}):(\d{2})\s*(am|pm)?/i,
-      /(\d{1,2})\s*(am|pm)/i,
-      /(\d{1,2})\s*(am|pm)/i
+      /(\d{1,2})\.(\d{2})\s*(am|pm|a\.m\.|p\.m\.|a\.m|p\.m)/i,  // Decimal time first: "10.09 p.m."
+      /(\d{1,2}):(\d{2})\s*(am|pm)?/i,                        // Standard time: "11:30 am"
+      /(\d{1,2})\s*(am|pm)/i,                                 // Simple time: "11 am"
+      /(\d{1,2})\s*(a\.m\.|p\.m\.)/i,                         // Dotted time: "11 a.m."
+      /(\d{1,2})\s*(a\.m|p\.m)/i                             // Partial dotted: "11 a.m"
     ];
     
     for (const pattern of timePatterns) {
       const match = text.match(pattern);
       if (match) {
+        console.log(`🕐 Pattern matched:`, match);
         let hours = parseInt(match[1]);
-        const minutes = match[2] ? parseInt(match[2]) : 0;
-        const ampm = match[3]?.toLowerCase();
+        let minutes = 0;
+        let ampm = '';
+        
+        // Handle different regex patterns
+        if (match[2] && !isNaN(parseInt(match[2]))) {
+          // Pattern with minutes: "11:30 am" or "10.09 p.m."
+          minutes = parseInt(match[2]);
+          ampm = match[3]?.toLowerCase().replace(/\./g, '') || '';
+        } else {
+          // Pattern without minutes: "11 am" or "11 a.m."
+          ampm = match[2]?.toLowerCase().replace(/\./g, '') || '';
+        }
+        
+        console.log(`🕐 Parsed: hours=${hours}, minutes=${minutes}, ampm="${ampm}"`);
         
         if (ampm === 'pm' && hours !== 12) {
           hours += 12;
@@ -88,7 +178,9 @@ export class DateNormalizer {
           hours = 0;
         }
         
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        const result = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        console.log(`🕐 Final time: ${result}`);
+        return result;
       }
     }
     

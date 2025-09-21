@@ -43,7 +43,7 @@ export async function geminiParseStrictJSON(system: string, user: string): Promi
     throw new Error(`AI Studio error ${res.status}: ${text}`);
   }
 
-  const data = await res.json();
+  const data = await res.json() as any;
   const out =
     data?.candidates?.[0]?.content?.parts?.[0]?.text ??
     data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ??
@@ -213,7 +213,10 @@ Extract the task information. If anything is missing or unclear, ask ONE specifi
         return {
           needsFollowup: true,
           missing: ['childId'],
-          question: `I don't recognize that child. Available children: ${children.map(c => c.name).join(', ')}`
+          question: `I don't recognize that child. Available children: ${children.map(c => c.name).join(', ')}`,
+          result: null,
+          speak: `I don't recognize that child. Available children: ${children.map(c => c.name).join(', ')}`,
+          sessionId: 'default-session'
         };
       }
       
@@ -224,12 +227,34 @@ Extract the task information. If anything is missing or unclear, ask ONE specifi
         return {
           needsFollowup: true,
           missing: ['dueAt'],
-          question: 'The due date must be in the future. When should this task be completed?'
+          question: 'The due date must be in the future. When should this task be completed?',
+          result: null,
+          speak: 'The due date must be in the future. When should this task be completed?',
+          sessionId: 'default-session'
         };
       }
     }
     
-    return validatedResponse;
+    // Convert ParseResult to ParseResponse
+    if (validatedResponse.needsFollowup) {
+      return {
+        needsFollowup: true,
+        missing: validatedResponse.missing,
+        question: validatedResponse.question,
+        result: null,
+        speak: validatedResponse.question,
+        sessionId: 'default-session'
+      };
+    } else {
+      return {
+        needsFollowup: false,
+        missing: [],
+        question: `Task created: ${validatedResponse.result.title}`,
+        result: validatedResponse.result,
+        speak: `Task created: ${validatedResponse.result.title}`,
+        sessionId: 'default-session'
+      };
+    }
 
   } catch (error) {
     console.error('❌ AI Studio parsing error:', error);

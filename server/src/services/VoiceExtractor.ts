@@ -14,66 +14,48 @@ export class VoiceExtractor {
     expectedSlot: string | undefined,
     childrenRoster: Array<{id: string; name: string}>
   ): Promise<SlotDelta> {
-    const systemPrompt = `You are a slot extraction assistant for a voice task creation app. Extract information from user utterances and return JSON only.
+        const systemPrompt = `You are an intelligent task creation assistant. Extract information from user speech and return JSON only.
+        
+        AVAILABLE CHILDREN: ${childrenRoster.map(c => c.name).join(', ')}
+        
+        EXTRACTION RULES:
+        1. CHILD: Extract any child name mentioned from the available children list above
+        2. TASK: Extract task description (clean room, do dishes, take out trash, etc.)
+        3. TIME: Extract due date/time (tomorrow, today, Friday, next week, etc.)
+        4. POINTS: Extract point value (20 points, 50, worth 100, etc.)
+        5. INTENT: Determine user intent (new_task, answer, cancel, noop)
+        
+        CONTEXT AWARENESS:
+        - If user says "create task" or "new task", set intent to "new_task"
+        - If user provides missing information, set intent to "answer"
+        - If user says "cancel" or "stop", set intent to "cancel"
+        - If unclear, set intent to "noop"
+        
+        CHILD NAME MATCHING:
+        - Match names exactly as they appear in the available children list
+        - Be flexible with variations (e.g., "Mike" matches "Michael", "Alex" matches "Alexander")
+        - If a name is not in the available children list, still extract it but note it may not be recognized
+        
+        EXAMPLES:
+        - "Create task for Emma to clean room tomorrow worth 50 points" → {"intent": "new_task", "slot_updates": {"assignedChildName": "Emma", "title": "clean room", "dueText": "tomorrow", "points": 50}}
+        - "Create task for Emma" → {"intent": "new_task", "slot_updates": {"assignedChildName": "Emma", "title": "task"}}
+        - "Emma" → {"intent": "answer", "slot_updates": {"assignedChildName": "Emma"}}
+        - "clean room" → {"intent": "answer", "slot_updates": {"title": "clean room"}}
+        - "tomorrow" → {"intent": "answer", "slot_updates": {"dueText": "tomorrow"}}
+        - "50 points" → {"intent": "answer", "slot_updates": {"points": 50}}
+        - "cancel" → {"intent": "cancel", "slot_updates": {}}
+        
+        Return JSON only.`;
 
-CRITICAL: Return ONLY valid JSON, no other text.
-
-SLOT MAPPING:
-- Child names from roster → assignedChildName
-- Task descriptions → title  
-- Time references → dueText
-- Point values → points
-
-EXAMPLES:
-- "Emma" → {"intent": "answer", "slot_updates": {"assignedChildName": "Emma"}}
-- "clean her room" → {"intent": "answer", "slot_updates": {"title": "clean her room"}}
-- "tomorrow" → {"intent": "answer", "slot_updates": {"dueText": "tomorrow"}}
-- "50 points" → {"intent": "answer", "slot_updates": {"points": 50}}
-- "Create task for Emma, due tomorrow, worth 50 points" → {"intent": "answer", "slot_updates": {"assignedChildName": "Emma", "dueText": "tomorrow", "points": 50}}
-
-IMPORTANT: If the user repeats the AI's question (like "What task should I create?"), treat it as a question and return intent: "noop" with empty slot_updates.
-
-RESPONSE FORMAT:
-{
-  "intent": "answer|revise|new_task|cancel|noop",
-  "slot_updates": {
-    "assignedChildName": "Emma",
-    "title": "clean her room", 
-    "dueText": "tomorrow",
-    "points": 50
-  },
-  "ambiguous": [],
-  "notes": "optional"
-}`;
-
-    const userPrompt = `Current slots: ${JSON.stringify(currentSlots)}
-Expected slot: ${expectedSlot || 'none'}
-Children roster: ${JSON.stringify(childrenRoster)}
-User utterance: "${utterance}"
-
-EXTRACTION RULES:
-1. If user mentions a child name from the roster, set assignedChildName
-2. If user describes a task (clean, make, do, etc.), set title
-3. If user mentions time (today, tomorrow, Friday, etc.), set dueText
-4. If user mentions points (10 points, worth 20, etc.), set points
-5. If this is a follow-up answer, extract only what the user provided
-6. If this is a complete command, extract ALL available information
-
-EXAMPLES:
-- "Create task for Emma" → {"assignedChildName": "Emma"}
-- "clean her room" → {"title": "clean her room"}
-- "tomorrow" → {"dueText": "tomorrow"}
-- "50 points" → {"points": 50}
-- "Create task for Emma, that is due tomorrow worth 50 points" → {"assignedChildName": "Emma", "dueText": "tomorrow", "points": 50}
-
-Extract the slot updates from this utterance.`;
+    const userPrompt = `User said: "${utterance}"
+Extract what they want.`;
 
     try {
       const result = await this.model.generateContent([systemPrompt, userPrompt]);
       const response = await result.response;
       const text = response.text();
       
-      console.log('AI Response:', text);
+      console.log('🤖 AI Response:', text);
       
       // Clean up the response - remove markdown code blocks if present
       let cleanText = text.trim();
@@ -83,19 +65,46 @@ Extract the slot updates from this utterance.`;
         cleanText = cleanText.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
       
-      console.log('Cleaned text:', cleanText);
+      console.log('🧹 Cleaned text:', cleanText);
       
-      // Parse JSON response
+      // Parse JSON response with validation
       const delta = JSON.parse(cleanText) as SlotDelta;
-      console.log('Parsed Delta:', delta);
+      
+      // Validate delta structure
+      if (!delta || typeof delta !== 'object') {
+        throw new Error('Invalid delta structure');
+      }
+      
+      if (!delta.intent || !delta.slot_updates) {
+        throw new Error('Missing required delta fields');
+      }
+      
+      console.log('✅ Parsed Delta:', delta);
       return delta;
     } catch (error) {
-      console.error('Error extracting slot delta:', error);
-      return {
-        intent: 'noop',
-        slot_updates: {},
-        notes: 'Extraction failed'
-      };
+      console.error('❌ Error extracting slot delta:', error);
+      
+      // Return safe fallback based on utterance
+      const utteranceLower = utterance.toLowerCase();
+      if (utteranceLower.includes('cancel') || utteranceLower.includes('stop')) {
+        return {
+          intent: 'cancel',
+          slot_updates: {},
+          notes: 'Extraction failed, assuming cancel'
+        };
+      } else if (utteranceLower.includes('create') || utteranceLower.includes('task')) {
+        return {
+          intent: 'new_task',
+          slot_updates: {},
+          notes: 'Extraction failed, assuming new task'
+        };
+      } else {
+        return {
+          intent: 'answer',
+          slot_updates: {},
+          notes: 'Extraction failed, assuming answer'
+        };
+      }
     }
   }
 }

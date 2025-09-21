@@ -198,8 +198,10 @@ class ChoreService: ObservableObject {
                         var dueDate = Date()
                         if let timestamp = data["dueDate"] as? Timestamp {
                             dueDate = timestamp.dateValue()
+                            print("🗓️ Loaded dueDate from Timestamp: \(dueDate)")
                         } else if let date = data["dueDate"] as? Date {
                             dueDate = date
+                            print("🗓️ Loaded dueDate from Date: \(dueDate)")
                         }
                         
                         // Handle createdAt - it might be stored as Timestamp
@@ -270,8 +272,10 @@ class ChoreService: ObservableObject {
                         var dueDate = Date()
                         if let timestamp = data["dueDate"] as? Timestamp {
                             dueDate = timestamp.dateValue()
+                            print("🗓️ Loaded dueDate from Timestamp: \(dueDate)")
                         } else if let date = data["dueDate"] as? Date {
                             dueDate = date
+                            print("🗓️ Loaded dueDate from Date: \(dueDate)")
                         }
                         
                         // Handle createdAt - it might be stored as Timestamp
@@ -572,11 +576,11 @@ class ChoreService: ObservableObject {
                 "title": chore.title,
                 "description": chore.description,
                 "points": chore.points,
-                "dueDate": chore.dueDate,
+                "dueDate": Timestamp(date: chore.dueDate),
                 "isCompleted": chore.isCompleted,
                 "isRequired": chore.isRequired,
                 "assignedToChildId": chore.assignedToChildId?.uuidString,
-                "createdAt": chore.createdAt,
+                "createdAt": Timestamp(date: chore.createdAt),
                 "updatedAt": FieldValue.serverTimestamp()
             ]
             

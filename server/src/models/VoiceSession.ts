@@ -15,6 +15,9 @@ export interface VoiceSession {
   status: 'in_progress' | 'ready_to_create' | 'completed' | 'cancelled';
   createdAt: Date;
   expiresAt: Date;
+  userId?: string;
+  lastTurnIndex: number;
+  lastTurnId?: string;
 }
 
 export interface SlotDelta {

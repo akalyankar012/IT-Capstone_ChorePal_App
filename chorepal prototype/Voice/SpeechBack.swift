@@ -138,21 +138,21 @@ class SpeechBack: NSObject, ObservableObject {
 
 extension SpeechBack: AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
-        DispatchQueue.main.async {
+        Task { @MainActor in
             self.isSpeaking = true
         }
         print("🔊 Speech started")
     }
     
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        DispatchQueue.main.async {
+        Task { @MainActor in
             self.isSpeaking = false
         }
         print("🔊 Speech finished")
     }
     
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        DispatchQueue.main.async {
+        Task { @MainActor in
             self.isSpeaking = false
         }
         print("🔊 Speech cancelled")

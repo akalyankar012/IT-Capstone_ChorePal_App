@@ -36,7 +36,7 @@ struct VoiceView: View {
                 Spacer()
             }
             .padding()
-            .navigationTitle("Voice Tasks")
+            .navigationTitle("VOICE TASKS")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

@@ -25,62 +25,172 @@ struct VoiceTaskCreationView: View {
     @State private var recordingAnimation = false
     @State private var isProcessing = false
     @State private var sessionId: String? = nil
+    @State private var turnIndex = 0
+    @State private var userId: String = ""
+    
+    // Enhanced animation states
+    @State private var pulseAnimation = false
+    @State private var waveAnimation = false
+    @State private var shimmerAnimation = false
+    @State private var bounceAnimation = false
+    @State private var rotationAnimation = false
+    @State private var scaleAnimation = false
     
     private let themeColor = Color(hex: "#a2cee3")
+    private let accentColor = Color(hex: "#4A90E2")
+    private let successColor = Color(hex: "#4CAF50")
+    private let warningColor = Color(hex: "#FF9800")
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header
+                // Enhanced Header with Animations
                 VStack(spacing: 16) {
                     HStack {
                         Button("Cancel") {
-                            dismiss()
+                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                dismiss()
+                            }
                         }
                         .foregroundColor(.red)
+                        .font(.system(size: 16, weight: .medium))
+                        .scaleEffect(bounceAnimation ? 1.1 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: bounceAnimation)
                         
                         Spacer()
                         
-                        Text("Voice Tasks")
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                        HStack(spacing: 8) {
+                            // Updated code indicator
+                            Text("✨")
+                                .font(.system(size: 14))
+                                .opacity(0.8)
+                            
+                            Image(systemName: "mic.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(accentColor)
+                                .scaleEffect(pulseAnimation ? 1.2 : 1.0)
+                                .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: pulseAnimation)
+                            
+                            Text("Voice Tasks")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.primary)
+                        }
                         
                         Spacer()
                         
                         Button("Done") {
-                            dismiss()
+                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                dismiss()
+                            }
                         }
-                        .foregroundColor(themeColor)
+                        .foregroundColor(successColor)
+                        .font(.system(size: 16, weight: .semibold))
                         .opacity(conversationStep == 2 ? 1 : 0)
+                        .scaleEffect(conversationStep == 2 ? 1.0 : 0.8)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: conversationStep)
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    
+                    // Animated progress indicator
+                    if conversationStep > 0 {
+                        HStack(spacing: 8) {
+                            ForEach(0..<3, id: \.self) { index in
+                                Circle()
+                                    .fill(index < conversationStep ? accentColor : Color.gray.opacity(0.3))
+                                    .frame(width: 8, height: 8)
+                                    .scaleEffect(index < conversationStep ? 1.2 : 1.0)
+                                    .animation(.spring(response: 0.4, dampingFraction: 0.6).delay(Double(index) * 0.1), value: conversationStep)
+                            }
+                        }
+                        .padding(.bottom, 8)
+                    }
                     
                     Divider()
+                        .background(LinearGradient(colors: [.clear, accentColor.opacity(0.3), .clear], startPoint: .leading, endPoint: .trailing))
                 }
-                .background(Color(.systemBackground))
+                .background(
+                    LinearGradient(
+                        colors: [Color(.systemBackground), Color(.systemBackground).opacity(0.95)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
                 
                 // Chat Messages
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 12) {
-                            // Welcome message
+                            // Enhanced Welcome message with animations
                             if chatMessages.isEmpty {
-                                VStack(spacing: 16) {
-                                    Image(systemName: "mic.fill")
-                                        .font(.system(size: 50))
-                                        .foregroundColor(themeColor)
+                                VStack(spacing: 24) {
+                                    // Animated microphone icon
+                                    ZStack {
+                                        // Pulsing background circles
+                                        ForEach(0..<3, id: \.self) { index in
+                                            Circle()
+                                                .stroke(accentColor.opacity(0.3 - Double(index) * 0.1), lineWidth: 2)
+                                                .frame(width: 80 + CGFloat(index * 20), height: 80 + CGFloat(index * 20))
+                                                .scaleEffect(pulseAnimation ? 1.3 : 1.0)
+                                                .opacity(pulseAnimation ? 0.0 : 1.0)
+                                                .animation(
+                                                    Animation.easeInOut(duration: 2.0)
+                                                        .repeatForever(autoreverses: false)
+                                                        .delay(Double(index) * 0.3),
+                                                    value: pulseAnimation
+                                                )
+                                        }
+                                        
+                                        // Main microphone icon
+                                        Image(systemName: "mic.fill")
+                                            .font(.system(size: 50, weight: .medium))
+                                            .foregroundColor(accentColor)
+                                            .scaleEffect(pulseAnimation ? 1.1 : 1.0)
+                                            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: pulseAnimation)
+                                    }
+                                    .onAppear {
+                                        pulseAnimation = true
+                                    }
                                     
-                                    Text("Speak your chore assignment")
-                                        .font(.title2)
-                                        .fontWeight(.semibold)
+                                    VStack(spacing: 12) {
+                                        Text("Speak your chore assignment")
+                                            .font(.system(size: 24, weight: .bold))
+                                            .foregroundColor(.primary)
+                                            .multilineTextAlignment(.center)
+                                        
+                                        Text("Example: \"Make dishes for Emma tomorrow worth 20 points\"")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                            .multilineTextAlignment(.center)
+                                            .padding(.horizontal, 20)
+                                            .opacity(shimmerAnimation ? 0.7 : 1.0)
+                                            .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: shimmerAnimation)
+                                    }
                                     
-                                    Text("Example: \"Make dishes for Emma tomorrow worth 20 points\"")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                        .multilineTextAlignment(.center)
-                                        .padding(.horizontal)
+                                    // Animated dots
+                                    HStack(spacing: 8) {
+                                        ForEach(0..<3, id: \.self) { index in
+                                            Circle()
+                                                .fill(accentColor)
+                                                .frame(width: 8, height: 8)
+                                                .scaleEffect(waveAnimation ? 1.5 : 1.0)
+                                                .opacity(waveAnimation ? 0.3 : 1.0)
+                                                .animation(
+                                                    Animation.easeInOut(duration: 1.0)
+                                                        .repeatForever(autoreverses: true)
+                                                        .delay(Double(index) * 0.2),
+                                                    value: waveAnimation
+                                                )
+                                        }
+                                    }
+                                    .onAppear {
+                                        waveAnimation = true
+                                    }
                                 }
-                                .padding(.vertical, 40)
+                                .padding(.vertical, 60)
+                                .onAppear {
+                                    shimmerAnimation = true
+                                }
                             }
                             
                             // Chat messages
@@ -132,143 +242,302 @@ struct VoiceTaskCreationView: View {
                             .multilineTextAlignment(.center)
                     }
                     
-                    // Recording button with visualizer
+                    // Enhanced Recording button with advanced animations
                     ZStack {
-                        // Background circle with shadow
+                        // Animated background with gradient
                         Circle()
-                            .fill(Color(.systemBackground))
-                            .frame(width: 120, height: 120)
-                            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                            .fill(
+                                LinearGradient(
+                                    colors: isRecording ? 
+                                        [Color.red.opacity(0.1), Color.red.opacity(0.05)] :
+                                        [accentColor.opacity(0.1), accentColor.opacity(0.05)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 140, height: 140)
+                            .scaleEffect(isRecording ? 1.2 : 1.0)
+                            .animation(.easeInOut(duration: 0.5), value: isRecording)
+                            .shadow(
+                                color: isRecording ? Color.red.opacity(0.3) : accentColor.opacity(0.2),
+                                radius: isRecording ? 20 : 10,
+                                x: 0,
+                                y: 0
+                            )
+                            .animation(.easeInOut(duration: 0.5), value: isRecording)
                         
-                        // Recording button
+                        // Multiple animated rings for recording
+                        if isRecording {
+                            ForEach(0..<4, id: \.self) { index in
+                                Circle()
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [Color.red.opacity(0.6), Color.red.opacity(0.2)],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        ),
+                                        lineWidth: 3
+                                    )
+                                    .frame(width: 90 + CGFloat(index * 25), height: 90 + CGFloat(index * 25))
+                                    .scaleEffect(recordingAnimation ? 1.8 : 1.0)
+                                    .opacity(recordingAnimation ? 0.0 : 0.8)
+                                    .animation(
+                                        Animation.easeInOut(duration: 1.5)
+                                            .repeatForever(autoreverses: false)
+                                            .delay(Double(index) * 0.3),
+                                        value: recordingAnimation
+                                    )
+                            }
+                        }
+                        
+                        // Main button with enhanced styling
                         Button(action: {
-                            if isRecording {
-                                stopRecording()
-                            } else {
-                                startRecording()
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                                if isRecording {
+                                    stopRecording()
+                                } else {
+                                    startRecording()
+                                }
                             }
                         }) {
                             ZStack {
-                                // Main button circle with recording animation
+                                // Button background with gradient
                                 Circle()
-                                    .fill(isRecording ? Color.red : themeColor)
-                                    .frame(width: 80, height: 80)
-                                    .scaleEffect(isRecording ? 1.1 : 1.0)
-                                    .animation(.easeInOut(duration: 0.3), value: isRecording)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: isRecording ? 
+                                                [Color.red, Color.red.opacity(0.8)] :
+                                                [accentColor, accentColor.opacity(0.8)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 85, height: 85)
+                                    .scaleEffect(isRecording ? 1.15 : 1.0)
+                                    .animation(.spring(response: 0.4, dampingFraction: 0.6), value: isRecording)
                                     .shadow(
-                                        color: isRecording ? Color.red.opacity(0.6) : Color.clear,
-                                        radius: isRecording ? 15 : 0,
+                                        color: isRecording ? Color.red.opacity(0.4) : accentColor.opacity(0.3),
+                                        radius: isRecording ? 12 : 8,
                                         x: 0,
-                                        y: 0
+                                        y: 4
                                     )
                                     .animation(.easeInOut(duration: 0.3), value: isRecording)
                                 
-                                // Multiple recording animation rings
-                                if isRecording {
-                                    ForEach(0..<3, id: \.self) { index in
-                                        Circle()
-                                            .stroke(Color.red.opacity(0.4 - Double(index) * 0.1), lineWidth: 2)
-                                            .frame(width: 100 + CGFloat(index * 20), height: 100 + CGFloat(index * 20))
-                                            .scaleEffect(recordingAnimation ? 1.5 : 1.0)
-                                            .opacity(recordingAnimation ? 0.0 : 1.0)
-                                            .animation(
-                                                Animation.easeInOut(duration: 1.2)
-                                                    .repeatForever(autoreverses: false)
-                                                    .delay(Double(index) * 0.2),
-                                                value: recordingAnimation
-                                            )
-                                    }
-                                }
+                                // Inner glow effect
+                                Circle()
+                                    .fill(Color.white.opacity(0.2))
+                                    .frame(width: 60, height: 60)
+                                    .scaleEffect(isRecording ? 1.2 : 1.0)
+                                    .opacity(isRecording ? 0.8 : 0.4)
+                                    .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: isRecording)
                                 
-                                // Icon with recording animation
+                                // Icon with enhanced animation
                                 Image(systemName: isRecording ? "stop.fill" : "mic.fill")
-                                    .font(.system(size: 32, weight: .medium))
+                                    .font(.system(size: 36, weight: .semibold))
                                     .foregroundColor(.white)
-                                    .scaleEffect(isRecording ? 1.1 : 1.0)
-                                    .animation(.easeInOut(duration: 0.3), value: isRecording)
+                                    .scaleEffect(isRecording ? 1.2 : 1.0)
+                                    .rotationEffect(.degrees(isRecording ? 180 : 0))
+                                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: isRecording)
                             }
                         }
                         .disabled(isProcessing)
+                        .scaleEffect(bounceAnimation ? 0.95 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: bounceAnimation)
                         .onLongPressGesture(minimumDuration: 0.1, maximumDistance: .infinity, pressing: { pressing in
                             if pressing && !isRecording && !isProcessing {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                    bounceAnimation = true
+                                }
                                 startRecording()
                             } else if !pressing && isRecording {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                    bounceAnimation = false
+                                }
                                 stopRecording()
                             }
                         }, perform: {})
                     }
                     
-                    // Status indicators
+                    // Enhanced Status indicators with advanced animations
                     if isRecording {
-                        VStack(spacing: 12) {
-                            // Animated visualizer bars
-                            HStack(spacing: 3) {
-                                ForEach(0..<5, id: \.self) { index in
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .fill(Color.red)
-                                        .frame(width: 4, height: 12)
-                                        .scaleEffect(y: recordingAnimation ? CGFloat.random(in: 0.3...2.0) : 1.0)
+                        VStack(spacing: 16) {
+                            // Advanced audio visualizer
+                            HStack(spacing: 4) {
+                                ForEach(0..<7, id: \.self) { index in
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color.red, Color.red.opacity(0.6)],
+                                                startPoint: .top,
+                                                endPoint: .bottom
+                                            )
+                                        )
+                                        .frame(width: 6, height: 20)
+                                        .scaleEffect(y: recordingAnimation ? CGFloat.random(in: 0.2...2.5) : 1.0)
                                         .animation(
-                                            Animation.easeInOut(duration: 0.4)
+                                            Animation.easeInOut(duration: 0.6)
                                                 .repeatForever(autoreverses: true)
-                                                .delay(Double(index) * 0.15),
+                                                .delay(Double(index) * 0.1),
                                             value: recordingAnimation
                                         )
                                 }
                             }
-                            .frame(height: 24)
+                            .frame(height: 30)
+                            .padding(.horizontal, 20)
                             
-                            HStack(spacing: 8) {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 8, height: 8)
-                                    .scaleEffect(recordingAnimation ? 1.3 : 1.0)
-                                    .animation(
-                                        Animation.easeInOut(duration: 0.8).repeatForever(autoreverses: true),
-                                        value: recordingAnimation
-                                    )
+                            // Recording status with enhanced styling
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.red.opacity(0.2))
+                                        .frame(width: 16, height: 16)
+                                        .scaleEffect(recordingAnimation ? 1.5 : 1.0)
+                                        .opacity(recordingAnimation ? 0.0 : 1.0)
+                                        .animation(
+                                            Animation.easeInOut(duration: 1.0)
+                                                .repeatForever(autoreverses: false),
+                                            value: recordingAnimation
+                                        )
+                                    
+                                    Circle()
+                                        .fill(Color.red)
+                                        .frame(width: 12, height: 12)
+                                        .scaleEffect(recordingAnimation ? 1.2 : 1.0)
+                                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: recordingAnimation)
+                                }
                                 
                                 Text("Recording...")
-                                    .font(.headline)
+                                    .font(.system(size: 18, weight: .bold))
                                     .foregroundColor(.red)
-                                    .fontWeight(.semibold)
+                                    .opacity(recordingAnimation ? 0.8 : 1.0)
+                                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: recordingAnimation)
                             }
                             
                             Text("Release to stop")
-                                .font(.caption)
+                                .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.secondary)
-                                .opacity(0.8)
+                                .opacity(0.7)
                         }
+                        .padding(.vertical, 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color.red.opacity(0.05))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                                )
+                        )
+                        .padding(.horizontal, 20)
                     } else if isProcessing {
-                        VStack(spacing: 8) {
-                            HStack(spacing: 8) {
-                                ProgressView()
-                                    .scaleEffect(0.8)
+                        VStack(spacing: 16) {
+                            // Enhanced processing indicator
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .stroke(accentColor.opacity(0.3), lineWidth: 3)
+                                        .frame(width: 24, height: 24)
+                                    
+                                    Circle()
+                                        .trim(from: 0, to: 0.7)
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [accentColor, accentColor.opacity(0.6)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                                        )
+                                        .frame(width: 24, height: 24)
+                                        .rotationEffect(.degrees(rotationAnimation ? 360 : 0))
+                                        .animation(
+                                            Animation.linear(duration: 1.0)
+                                                .repeatForever(autoreverses: false),
+                                            value: rotationAnimation
+                                        )
+                                }
                                 
                                 Text("Processing...")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(accentColor)
                             }
+                            
+                            Text("Please wait")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .opacity(0.7)
+                        }
+                        .padding(.vertical, 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(accentColor.opacity(0.05))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(accentColor.opacity(0.2), lineWidth: 1)
+                                )
+                        )
+                        .padding(.horizontal, 20)
+                        .onAppear {
+                            rotationAnimation = true
                         }
                     }
                 }
                 .padding(.bottom, 30)
                 .background(
                     ZStack {
-                        Color(.systemBackground)
+                        // Enhanced background with gradient
+                        LinearGradient(
+                            colors: [
+                                Color(.systemBackground),
+                                Color(.systemBackground).opacity(0.95),
+                                accentColor.opacity(0.02)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                         
-                        // Subtle recording background animation
+                        // Animated background elements
                         if isRecording {
+                            // Multiple pulsing circles
+                            ForEach(0..<3, id: \.self) { index in
+                                Circle()
+                                    .fill(
+                                        RadialGradient(
+                                            colors: [
+                                                Color.red.opacity(0.1 - Double(index) * 0.03),
+                                                Color.clear
+                                            ],
+                                            center: .center,
+                                            startRadius: 50,
+                                            endRadius: 150
+                                        )
+                                    )
+                                    .frame(width: 300 + CGFloat(index * 100), height: 300 + CGFloat(index * 100))
+                                    .scaleEffect(recordingAnimation ? 1.5 : 1.0)
+                                    .opacity(recordingAnimation ? 0.0 : 1.0)
+                                    .animation(
+                                        Animation.easeInOut(duration: 2.5)
+                                            .repeatForever(autoreverses: false)
+                                            .delay(Double(index) * 0.5),
+                                        value: recordingAnimation
+                                    )
+                                    .offset(y: -100 - CGFloat(index * 20))
+                            }
+                        } else {
+                            // Subtle ambient animation
                             Circle()
-                                .fill(Color.red.opacity(0.05))
-                                .frame(width: 200, height: 200)
-                                .scaleEffect(recordingAnimation ? 1.2 : 1.0)
-                                .opacity(recordingAnimation ? 0.0 : 1.0)
-                                .animation(
-                                    Animation.easeInOut(duration: 2.0).repeatForever(autoreverses: false),
-                                    value: recordingAnimation
+                                .fill(
+                                    RadialGradient(
+                                        colors: [accentColor.opacity(0.05), Color.clear],
+                                        center: .center,
+                                        startRadius: 50,
+                                        endRadius: 200
+                                    )
                                 )
-                                .offset(y: -50)
+                                .frame(width: 400, height: 400)
+                                .scaleEffect(pulseAnimation ? 1.1 : 1.0)
+                                .opacity(pulseAnimation ? 0.3 : 0.1)
+                                .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: pulseAnimation)
+                                .offset(y: -150)
                         }
                     }
                 )
@@ -277,6 +546,12 @@ struct VoiceTaskCreationView: View {
         }
         .onAppear {
             setupVoiceComponents()
+            startNewSession()
+            
+            // Start ambient animations
+            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                pulseAnimation = true
+            }
         }
         .alert("Error", isPresented: $showingAlert) {
             Button("OK") { }
@@ -297,18 +572,63 @@ struct VoiceTaskCreationView: View {
         }
     }
     
-    // MARK: - Recording Functions
+    // MARK: - Session Management
+    private func startNewSession() {
+        guard let parent = authService.currentParent else {
+            alertMessage = "No parent logged in"
+            showingAlert = true
+            return
+        }
+        
+        userId = parent.id.uuidString
+        let children = parent.children.map { VoiceChild(id: $0.id.uuidString, name: $0.name) }
+        
+        Task {
+            do {
+                let newSessionId = try await voiceService.startVoiceSession(userId: userId, children: children)
+                await MainActor.run {
+                    sessionId = newSessionId
+                    turnIndex = 0
+                    conversationStep = 0
+                    currentTaskContext = nil
+                    print("🆕 Started new session: \(newSessionId)")
+                }
+            } catch {
+                await MainActor.run {
+                    alertMessage = "Failed to start voice session: \(error.localizedDescription)"
+                    showingAlert = true
+                }
+            }
+        }
+    }
+    
+    // MARK: - Enhanced Recording Functions
     private func startRecording() {
-        // Enhanced haptic feedback
+        // Prevent multiple recording starts
+        guard !isRecording && !isProcessing else {
+            print("⚠️ Recording already in progress, ignoring start request")
+            return
+        }
+        
+        print("🎤 startRecording() - sessionId: \(sessionId ?? "nil"), conversationStep: \(conversationStep)")
+        
+        // Enhanced haptic feedback sequence
         let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
         impactFeedback.impactOccurred()
         
-        // Additional haptic for recording start
+        // Additional haptic feedback for recording start
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             let selectionFeedback = UISelectionFeedbackGenerator()
             selectionFeedback.selectionChanged()
         }
         
+        // Success haptic after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            let notificationFeedback = UINotificationFeedbackGenerator()
+            notificationFeedback.notificationOccurred(.success)
+        }
+        
+        // Don't clear session - let the server manage it properly
         isRecording = true
         recordingAnimation = true
         transcript = ""
@@ -322,9 +642,15 @@ struct VoiceTaskCreationView: View {
     }
     
     private func stopRecording() {
-        // Haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        // Enhanced haptic feedback sequence
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
+        
+        // Additional haptic for recording stop
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            let selectionFeedback = UISelectionFeedbackGenerator()
+            selectionFeedback.selectionChanged()
+        }
         
         isRecording = false
         recordingAnimation = false
@@ -377,9 +703,30 @@ struct VoiceTaskCreationView: View {
     
     // MARK: - Audio Processing
     private func processAudio(_ audioData: Data) {
+        guard let sessionId = sessionId else {
+            print("❌ No session ID available")
+            DispatchQueue.main.async {
+                self.isProcessing = false
+                self.alertMessage = "No active session. Please try again."
+                self.showingAlert = true
+            }
+            return
+        }
+        
+        let turnId = UUID().uuidString
+        let currentTurnIndex = turnIndex
+        turnIndex += 1
+        
         Task {
             do {
-                let transcript = try await voiceService.uploadSTT(audioData: audioData)
+                let voiceResponse = try await voiceService.processTurn(
+                    audioData: audioData,
+                    sessionId: sessionId,
+                    turnId: turnId,
+                    turnIndex: currentTurnIndex,
+                    userId: userId,
+                    children: authService.currentParent?.children.map { VoiceChild(id: $0.id.uuidString, name: $0.name) } ?? []
+                )
                 
                 await MainActor.run {
                     // Remove processing message
@@ -387,12 +734,10 @@ struct VoiceTaskCreationView: View {
                         chatMessages.removeLast()
                     }
                     
-                    // Add user transcript
-                    let userMessage = ChatMessage(text: transcript, isUser: true)
-                    chatMessages.append(userMessage)
+                    // User transcript is handled by the server response
                     
-                    // Process transcript
-                    processTranscript(transcript)
+                    // Handle the response
+                    handleVoiceResponse(voiceResponse)
                 }
             } catch {
                 await MainActor.run {
@@ -403,8 +748,15 @@ struct VoiceTaskCreationView: View {
                     if let lastMessage = chatMessages.last, lastMessage.isProcessing {
                         chatMessages.removeLast()
                     }
-                    alertMessage = "Failed to process audio: \(error.localizedDescription)"
-                    showingAlert = true
+                    
+                    // Handle session errors by restarting
+                    if case VoiceError.sessionExpired = error {
+                        print("🔄 Session expired, restarting...")
+                        startNewSession()
+                    } else {
+                        alertMessage = "Failed to process audio: \(error.localizedDescription)"
+                        showingAlert = true
+                    }
                 }
             }
         }
@@ -455,41 +807,59 @@ struct VoiceTaskCreationView: View {
     
     // MARK: - Voice Response Handling
     private func handleVoiceResponse(_ response: VoiceResponse) {
+        print("🔍 handleVoiceResponse() - sessionId: \(sessionId ?? "nil"), conversationStep: \(conversationStep)")
         print("🔍 Voice response: \(response)")
-        
-        // Reset recording state
-        isRecording = false
-        recordingAnimation = false
-        
-        // Store sessionId for future requests
-        if let newSessionId = response.sessionId {
-            sessionId = newSessionId
-        }
-        
-        // Use the exact sentence from the server
-        let aiMessage = ChatMessage(text: response.speak, isUser: false)
-        chatMessages.append(aiMessage)
-        speechBack.speak(response.speak)
-        
-        if response.needsFollowup {
-            // Handle follow-up question
-            conversationStep = 1
-        } else if response.result != nil {
-            // Handle confirmed task creation
-            if let taskFields = response.result {
-                print("✅ Creating chore: \(taskFields)")
-                createChore(from: taskFields)
-            } else {
-                print("❌ No task fields in confirmed response")
-                let errorMessage = ChatMessage(text: "❌ Could not extract task information", isUser: false)
-                chatMessages.append(errorMessage)
-                speechBack.speak("Sorry, I couldn't understand what task you want to create.")
+
+        // All UI updates must happen on main thread
+        DispatchQueue.main.async {
+            // Reset recording and processing state
+            self.isRecording = false
+            self.recordingAnimation = false
+            self.isProcessing = false
+            
+            // Remove any processing message
+            if let lastMessage = self.chatMessages.last, lastMessage.isProcessing {
+                self.chatMessages.removeLast()
             }
+            
+            // Use the exact sentence from the server
+            let aiMessage = ChatMessage(text: response.speak, isUser: false)
+            self.chatMessages.append(aiMessage)
+            
+            // Speak the response
+            self.speechBack.speak(response.speak)
+            
+            if response.needsFollowup {
+                // Handle follow-up question
+                self.conversationStep = 1
+            } else if response.result != nil {
+                // Handle confirmed task creation
+                if let taskFields = response.result {
+                    print("✅ Creating chore: \(taskFields)")
+                    self.createChore(from: taskFields)
+                    
+                    // Don't start new session immediately - let user continue with more tasks
+                    // Only start new session if explicitly requested
+                } else {
+                    print("❌ No task fields in confirmed response")
+                    let errorMessage = ChatMessage(text: "❌ Could not extract task information", isUser: false)
+                    self.chatMessages.append(errorMessage)
+                    self.speechBack.speak("Sorry, I couldn't understand what task you want to create.")
+                }
+            } else {
+                // Handle cases where no followup and no result (e.g., cancellation, noop)
+                print("ℹ️ No follow-up or result, likely noop or cancellation.")
+                // Don't clear session - let it continue for follow-ups
+            }
+            
+            print("🔍 handleVoiceResponse() - After: sessionId: \(self.sessionId ?? "nil"), conversationStep: \(self.conversationStep)")
         }
     }
     
     // MARK: - Chore Creation
     private func createChore(from taskFields: TaskFields) {
+        print("✅ createChore() - sessionId: \(sessionId ?? "nil"), conversationStep: \(conversationStep)")
+        
         guard let child = authService.currentParent?.children.first(where: { $0.id.uuidString == taskFields.childId }) else {
             let errorMessage = ChatMessage(text: "❌ Child not found", isUser: false)
             chatMessages.append(errorMessage)
@@ -497,10 +867,26 @@ struct VoiceTaskCreationView: View {
             return
         }
         
-        // Parse the due date
+        // Parse the due date - server now sends Unix timestamp
         let dueDate: Date
-        let formatter = ISO8601DateFormatter()
-        dueDate = formatter.date(from: taskFields.dueAt) ?? Date()
+        if let timestamp = Double(taskFields.dueAt) {
+            dueDate = Date(timeIntervalSince1970: timestamp / 1000) // Convert from milliseconds to seconds
+        } else {
+            // Fallback to ISO parsing if it's still a string
+            let formatter = ISO8601DateFormatter()
+            formatter.timeZone = TimeZone(identifier: "UTC")
+            dueDate = formatter.date(from: taskFields.dueAt) ?? Date()
+        }
+        
+        print("🗓️ Server date: \(taskFields.dueAt)")
+        print("🗓️ Parsed date: \(dueDate)")
+        print("🗓️ Local timezone: \(TimeZone.current.identifier)")
+        print("🗓️ Date in local time: \(DateFormatter.localizedString(from: dueDate, dateStyle: .medium, timeStyle: .short))")
+        
+        // Verify the date is correct
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
+        print("🗓️ Date components: year=\(components.year ?? 0), month=\(components.month ?? 0), day=\(components.day ?? 0), hour=\(components.hour ?? 0), minute=\(components.minute ?? 0)")
         
         // Create new chore with clean description
         let newChore = Chore(
@@ -527,7 +913,7 @@ struct VoiceTaskCreationView: View {
                 let confirmationText = "Done! \(taskFields.title) for \(child.name), due \(formatDate(dueDate)), worth \(taskFields.points) points."
                 speechBack.speak(confirmationText)
                 
-                conversationStep = 2
+                print("✅ createChore() - Task created successfully")
             }
         }
     }
@@ -541,45 +927,112 @@ struct VoiceTaskCreationView: View {
     }
 }
 
-// MARK: - Chat Bubble View
+// MARK: - Enhanced Chat Bubble View
 struct ChatBubbleView: View {
     let message: ChatMessage
+    @State private var appearAnimation = false
+    @State private var shimmerAnimation = false
+    
     private let themeColor = Color(hex: "#a2cee3")
+    private let accentColor = Color(hex: "#4A90E2")
+    private let successColor = Color(hex: "#4CAF50")
     
     var body: some View {
         HStack {
             if message.isUser {
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(message.text)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(themeColor)
-                        .foregroundColor(.white)
-                        .cornerRadius(20)
-                        .shadow(color: themeColor.opacity(0.3), radius: 4, x: 0, y: 2)
+                VStack(alignment: .trailing, spacing: 6) {
+                        Text(message.text)
+                            .font(.system(size: 16, weight: .medium))
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    colors: [themeColor, themeColor.opacity(0.8)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(22)
+                            .shadow(
+                                color: themeColor.opacity(0.4),
+                                radius: 8,
+                                x: 0,
+                                y: 4
+                            )
+                            .scaleEffect(appearAnimation ? 1.0 : 0.8)
+                            .opacity(appearAnimation ? 1.0 : 0.0)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.1), value: appearAnimation)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: .trailing)
                     
                     Text(formatTime(message.timestamp))
-                        .font(.caption2)
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
+                        .opacity(0.7)
                 }
             } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(message.text)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color(.systemGray6))
-                        .foregroundColor(.primary)
-                        .cornerRadius(20)
-                        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .top, spacing: 8) {
+                        // AI avatar
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [accentColor, accentColor.opacity(0.7)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                Image(systemName: "brain.head.profile")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.white)
+                            )
+                            .scaleEffect(appearAnimation ? 1.0 : 0.0)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.6), value: appearAnimation)
+                        
+                        Text(message.text)
+                            .font(.system(size: 16, weight: .medium))
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color(.systemGray6), Color(.systemGray5)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .foregroundColor(.primary)
+                            .cornerRadius(22)
+                            .shadow(
+                                color: .black.opacity(0.08),
+                                radius: 6,
+                                x: 0,
+                                y: 3
+                            )
+                            .scaleEffect(appearAnimation ? 1.0 : 0.8)
+                            .opacity(appearAnimation ? 1.0 : 0.0)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.2), value: appearAnimation)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: .leading)
+                    }
                     
                     Text(formatTime(message.timestamp))
-                        .font(.caption2)
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
+                        .opacity(0.7)
+                        .padding(.leading, 32)
                 }
                 
                 Spacer()
+            }
+        }
+        .onAppear {
+            withAnimation {
+                appearAnimation = true
             }
         }
     }
@@ -591,82 +1044,154 @@ struct ChatBubbleView: View {
     }
 }
 
-// MARK: - Recording Indicator View
+// MARK: - Enhanced Recording Indicator View
 struct RecordingIndicatorView: View {
     @State private var animationScale: CGFloat = 1.0
+    @State private var pulseAnimation = false
+    @State private var waveAnimation = false
     
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 8, height: 8)
-                        .scaleEffect(animationScale)
-                        .animation(
-                            Animation.easeInOut(duration: 0.6).repeatForever(autoreverses: true),
-                            value: animationScale
-                        )
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        // Pulsing background
+                        Circle()
+                            .fill(Color.red.opacity(0.2))
+                            .frame(width: 16, height: 16)
+                            .scaleEffect(pulseAnimation ? 1.5 : 1.0)
+                            .opacity(pulseAnimation ? 0.0 : 1.0)
+                            .animation(
+                                Animation.easeInOut(duration: 1.0)
+                                    .repeatForever(autoreverses: false),
+                                value: pulseAnimation
+                            )
+                        
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 12, height: 12)
+                            .scaleEffect(animationScale)
+                            .animation(
+                                Animation.easeInOut(duration: 0.6).repeatForever(autoreverses: true),
+                                value: animationScale
+                            )
+                    }
                     
                     Text("🎤 Recording...")
-                        .font(.subheadline)
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.red)
+                        .opacity(waveAnimation ? 0.8 : 1.0)
+                        .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: waveAnimation)
                 }
                 
                 Text("Release to stop")
-                    .font(.caption)
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
+                    .opacity(0.7)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color(.systemGray6))
-            .cornerRadius(20)
-            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color.red.opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                    )
+            )
+            .shadow(
+                color: Color.red.opacity(0.1),
+                radius: 8,
+                x: 0,
+                y: 4
+            )
             
             Spacer()
         }
         .onAppear {
             animationScale = 1.3
+            pulseAnimation = true
+            waveAnimation = true
         }
     }
 }
 
-// MARK: - Processing Indicator View
+// MARK: - Enhanced Processing Indicator View
 struct ProcessingIndicatorView: View {
     @State private var animationRotation: Double = 0
-    private let themeColor = Color(hex: "#a2cee3")
+    @State private var pulseAnimation = false
+    @State private var shimmerAnimation = false
+    
+    private let accentColor = Color(hex: "#4A90E2")
     
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .foregroundColor(themeColor)
-                        .rotationEffect(.degrees(animationRotation))
-                        .animation(
-                            Animation.linear(duration: 1.0).repeatForever(autoreverses: false),
-                            value: animationRotation
-                        )
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        // Outer ring
+                        Circle()
+                            .stroke(accentColor.opacity(0.3), lineWidth: 3)
+                            .frame(width: 24, height: 24)
+                            .scaleEffect(pulseAnimation ? 1.2 : 1.0)
+                            .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: pulseAnimation)
+                        
+                        // Spinning progress ring
+                        Circle()
+                            .trim(from: 0, to: 0.7)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [accentColor, accentColor.opacity(0.6)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                            )
+                            .frame(width: 24, height: 24)
+                            .rotationEffect(.degrees(animationRotation))
+                            .animation(
+                                Animation.linear(duration: 1.0)
+                                    .repeatForever(autoreverses: false),
+                                value: animationRotation
+                            )
+                    }
                     
                     Text("🔄 Processing...")
-                        .font(.subheadline)
-                        .foregroundColor(themeColor)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(accentColor)
+                        .opacity(shimmerAnimation ? 0.8 : 1.0)
+                        .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: shimmerAnimation)
                 }
                 
                 Text("Please wait")
-                    .font(.caption)
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
+                    .opacity(0.7)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color(.systemGray6))
-            .cornerRadius(20)
-            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(accentColor.opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(accentColor.opacity(0.2), lineWidth: 1)
+                    )
+            )
+            .shadow(
+                color: accentColor.opacity(0.1),
+                radius: 6,
+                x: 0,
+                y: 3
+            )
+            .frame(maxWidth: UIScreen.main.bounds.width * 0.75)
             
             Spacer()
         }
         .onAppear {
             animationRotation = 360
+            pulseAnimation = true
+            shimmerAnimation = true
         }
     }
 }

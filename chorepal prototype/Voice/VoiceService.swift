@@ -132,7 +132,107 @@ class VoiceService: ObservableObject {
         return voiceResponse
     }
     
-    // MARK: - Complete Voice Flow
+    // MARK: - Session Management
+    
+    func startVoiceSession(userId: String, children: [VoiceChild]) async throws -> String {
+        isLoading = true
+        defer { isLoading = false }
+        
+        guard let url = URL(string: "\(config.baseURL)/voice/session/start") else {
+            throw VoiceError.networkError
+        }
+        
+        let sessionRequest = SessionStartRequest(
+            userId: userId,
+            children: children
+        )
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(sessionRequest)
+        } catch {
+            print("❌ Failed to encode session start request: \(error)")
+            throw VoiceError.networkError
+        }
+        
+        print("🆕 Starting new voice session...")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw VoiceError.networkError
+        }
+        
+        if httpResponse.statusCode != 200 {
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("❌ Session start failed: \(httpResponse.statusCode) - \(errorMessage)")
+            throw VoiceError.networkError
+        }
+        
+        let sessionResponse = try JSONDecoder().decode(SessionStartResponse.self, from: data)
+        print("✅ Session started: \(sessionResponse.sessionId)")
+        return sessionResponse.sessionId
+    }
+    
+    // MARK: - Turn Processing
+    
+    func processTurn(audioData: Data, sessionId: String, turnId: String, turnIndex: Int, userId: String, children: [VoiceChild], phraseHints: [String] = []) async throws -> VoiceResponse {
+        // Step 1: Convert speech to text
+        let transcript = try await uploadSTT(audioData: audioData, phraseHints: phraseHints)
+        
+        // Step 2: Process turn
+        return try await processTurnWithTranscript(transcript: transcript, sessionId: sessionId, turnId: turnId, turnIndex: turnIndex, userId: userId, children: children)
+    }
+    
+    func processTurnWithTranscript(transcript: String, sessionId: String, turnId: String, turnIndex: Int, userId: String, children: [VoiceChild]) async throws -> VoiceResponse {
+        isLoading = true
+        defer { isLoading = false }
+        
+        // TEMPORARY FIX: Use legacy parse endpoint until server issue is resolved
+        guard let url = URL(string: config.parseEndpoint) else {
+            throw VoiceError.networkError
+        }
+        
+        let parseRequest = ParseRequest(
+            transcript: transcript,
+            children: children,
+            currentDate: ISO8601DateFormatter().string(from: Date()),
+            conversationContext: nil,
+            sessionId: sessionId
+        )
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(parseRequest)
+        } catch {
+            print("❌ Failed to encode parse request: \(error)")
+            throw VoiceError.networkError
+        }
+        
+        print("🔄 Processing transcript with legacy endpoint...")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw VoiceError.networkError
+        }
+        
+        if httpResponse.statusCode != 200 {
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("❌ Parse request failed: \(httpResponse.statusCode) - \(errorMessage)")
+            throw VoiceError.networkError
+        }
+        
+        let voiceResponse = try JSONDecoder().decode(VoiceResponse.self, from: data)
+        print("✅ Transcript processed: \(voiceResponse)")
+        return voiceResponse
+    }
+    
+    // MARK: - Complete Voice Flow (Legacy - for backward compatibility)
     
     func processVoiceCommand(audioData: Data, children: [VoiceChild], sessionId: String? = nil, phraseHints: [String] = []) async throws -> VoiceResponse {
         // Step 1: Convert speech to text
@@ -152,5 +252,22 @@ struct HealthResponse: Codable {
     let timestamp: String
     let project: String?
     let region: String?
+}
+
+struct SessionStartRequest: Codable {
+    let userId: String
+    let children: [VoiceChild]
+}
+
+struct SessionStartResponse: Codable {
+    let sessionId: String
+    let status: String
+    let message: String
+}
+
+struct TurnRequest: Codable {
+    let transcript: String
+    let children: [VoiceChild]
+    let currentDate: String
 }
 

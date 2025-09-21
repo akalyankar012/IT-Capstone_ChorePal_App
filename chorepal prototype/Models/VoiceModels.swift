@@ -13,6 +13,7 @@ enum VoiceError: Error, LocalizedError {
     case uploadFailed
     case parsingFailed
     case recordingFailed
+    case sessionExpired
     
     var errorDescription: String? {
         switch self {
@@ -32,6 +33,8 @@ enum VoiceError: Error, LocalizedError {
             return "Transcript parsing failed"
         case .recordingFailed:
             return "Audio recording failed"
+        case .sessionExpired:
+            return "Voice session expired. Please start a new session."
         }
     }
 }

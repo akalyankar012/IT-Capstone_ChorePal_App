@@ -4,7 +4,7 @@ class VoiceSessionStore {
   private sessions: Map<string, VoiceSession> = new Map();
   private readonly TTL_MINUTES = 15;
 
-  createSession(sessionId: string, childrenRoster: Array<{id: string; name: string}>): VoiceSession {
+  createSession(sessionId: string, childrenRoster: Array<{id: string; name: string}>, userId?: string): VoiceSession {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + this.TTL_MINUTES * 60 * 1000);
     
@@ -15,7 +15,10 @@ class VoiceSessionStore {
       childrenRoster,
       status: 'in_progress',
       createdAt: now,
-      expiresAt
+      expiresAt,
+      userId: userId,
+      lastTurnIndex: -1,
+      lastTurnId: undefined
     };
 
     this.sessions.set(sessionId, session);
@@ -61,6 +64,22 @@ class VoiceSessionStore {
   // Get session count for monitoring
   getSessionCount(): number {
     return this.sessions.size;
+  }
+
+  // Get sessions by user ID
+  getSessionsByUser(userId: string): VoiceSession[] {
+    const userSessions: VoiceSession[] = [];
+    for (const session of this.sessions.values()) {
+      if (session.userId === userId) {
+        userSessions.push(session);
+      }
+    }
+    return userSessions;
+  }
+
+  // Get active sessions by user ID
+  getActiveSessionsByUser(userId: string): VoiceSession[] {
+    return this.getSessionsByUser(userId).filter(session => session.status === 'in_progress');
   }
 }
 

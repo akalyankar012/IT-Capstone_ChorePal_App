@@ -19,7 +19,7 @@ export async function speechToText(request: STTRequest): Promise<STTResponse> {
 
     // Add phrase hints if provided
     if (request.phraseHints && request.phraseHints.length > 0) {
-      config.speechContexts = [{
+      (config as any).speechContexts = [{
         phrases: request.phraseHints,
         boost: 20.0 // Boost confidence for these phrases
       }];

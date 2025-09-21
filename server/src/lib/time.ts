@@ -1,4 +1,4 @@
-import { zonedTimeToUtc, utcToZonedTime, format } from 'date-fns';
+import { format } from 'date-fns';
 import { zonedTimeToUtc as zonedTimeToUtcTz, utcToZonedTime as utcToZonedTimeTz } from 'date-fns-tz';
 
 const TIMEZONE = 'America/Chicago';

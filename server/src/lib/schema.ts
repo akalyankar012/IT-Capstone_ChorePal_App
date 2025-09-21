@@ -57,4 +57,11 @@ export interface ParseRequest {
   conversationContext?: string; // Recent conversation for context
 }
 
-export interface ParseResponse extends ParseResult {}
+export interface ParseResponse {
+  needsFollowup: boolean;
+  missing: string[];
+  question: string;
+  result: TaskFields | null;
+  speak: string;
+  sessionId: string;
+}
