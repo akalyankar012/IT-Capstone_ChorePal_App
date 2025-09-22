@@ -5,3 +5,11 @@ xcuserdata/
 .build/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
+
+# Environment files with sensitive data
+.env
+.env.local
+.env.production
+.env.staging
+server/.env
+server/.env.local
