@@ -280,7 +280,7 @@ router.post('/parse', async (req, res) => {
       // Create new session
       const newSessionId = uuidv4();
       session = voiceSessionStore.createSession(newSessionId, children);
-      console.log(`🆕 Created new session: ${newSessionId}`);
+      console.log(`🆕 Created new session: ${newSessionId} (requested: ${sessionId || 'none'})`);
     } else {
       console.log(`🔄 Using existing session: ${sessionId}`);
       console.log(`📊 Current session slots:`, session.slots);
@@ -318,7 +318,7 @@ router.post('/parse', async (req, res) => {
         console.log(`🔄 Previous task completed, starting fresh session`);
         const newSessionId = uuidv4();
         session = voiceSessionStore.createSession(newSessionId, children);
-        console.log(`🆕 Created fresh session: ${newSessionId}`);
+        console.log(`🆕 Created fresh session: ${newSessionId} (old: ${sessionId})`);
       } else if (!session) {
         console.log(`🆕 No active session, creating new one`);
         const newSessionId = uuidv4();

@@ -2,14 +2,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChildSchema = exports.VoiceResponseSchema = exports.ParseResultSchema = exports.TaskFieldsSchema = void 0;
 const zod_1 = require("zod");
-// Task fields schema
+// Task fields schema (final output)
 exports.TaskFieldsSchema = zod_1.z.object({
     childId: zod_1.z.string().min(1, 'Child ID is required'),
     title: zod_1.z.string().min(1, 'Title is required'),
     dueAt: zod_1.z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}(Z|[+-]\d{2}:\d{2})$/, 'Invalid ISO date format'),
     points: zod_1.z.number().int().min(1, 'Points must be a positive integer')
 });
-// Parse result schemas
+// Parse result schemas (legacy - keeping for compatibility)
 exports.ParseResultSchema = zod_1.z.discriminatedUnion('needsFollowup', [
     zod_1.z.object({
         needsFollowup: zod_1.z.literal(true),

@@ -28,23 +28,6 @@ app.get('/health', (req, res) => {
 
 app.use('/voice', voiceRoutes);
 
-// Test endpoint for direct Gemini testing
-app.post('/test/gemini', async (req, res) => {
-  try {
-    const { parseTranscript } = await import('./services/gemini');
-    const result = await parseTranscript({
-      transcript: req.body.transcript || 'Make dishes for Emma tomorrow worth 20 points',
-      children: req.body.children || [
-        { id: '1', name: 'Emma' },
-        { id: '2', name: 'Zayn' }
-      ]
-    });
-    res.json(result);
-  } catch (error) {
-    console.error('Test Gemini error:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
-  }
-});
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

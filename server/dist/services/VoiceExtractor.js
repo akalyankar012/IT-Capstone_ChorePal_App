@@ -9,40 +9,38 @@ class VoiceExtractor {
         this.model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     }
     async extractSlotDelta(utterance, currentSlots, expectedSlot, childrenRoster) {
-        const systemPrompt = `You are an intelligent task creation assistant. Extract information from user speech and return JSON only.
-        
-        AVAILABLE CHILDREN: ${childrenRoster.map(c => c.name).join(', ')}
-        
-        EXTRACTION RULES:
-        1. CHILD: Extract any child name mentioned from the available children list above
-        2. TASK: Extract task description (clean room, do dishes, take out trash, etc.)
-        3. TIME: Extract due date/time (tomorrow, today, Friday, next week, etc.)
-        4. POINTS: Extract point value (20 points, 50, worth 100, etc.)
-        5. INTENT: Determine user intent (new_task, answer, cancel, noop)
-        
-        CONTEXT AWARENESS:
-        - If user says "create task" or "new task", set intent to "new_task"
-        - If user provides missing information, set intent to "answer"
-        - If user says "cancel" or "stop", set intent to "cancel"
-        - If unclear, set intent to "noop"
-        
-        CHILD NAME MATCHING:
-        - Match names exactly as they appear in the available children list
-        - Be flexible with variations (e.g., "Mike" matches "Michael", "Alex" matches "Alexander")
-        - If a name is not in the available children list, still extract it but note it may not be recognized
-        
-        EXAMPLES:
-        - "Create task for Emma to clean room tomorrow worth 50 points" → {"intent": "new_task", "slot_updates": {"assignedChildName": "Emma", "title": "clean room", "dueText": "tomorrow", "points": 50}}
-        - "Create task for Emma" → {"intent": "new_task", "slot_updates": {"assignedChildName": "Emma", "title": "task"}}
-        - "Emma" → {"intent": "answer", "slot_updates": {"assignedChildName": "Emma"}}
-        - "clean room" → {"intent": "answer", "slot_updates": {"title": "clean room"}}
-        - "tomorrow" → {"intent": "answer", "slot_updates": {"dueText": "tomorrow"}}
-        - "50 points" → {"intent": "answer", "slot_updates": {"points": 50}}
-        - "cancel" → {"intent": "cancel", "slot_updates": {}}
-        
-        Return JSON only.`;
-        const userPrompt = `User said: "${utterance}"
-Extract what they want.`;
+        const systemPrompt = `You are a task extraction assistant for a family chore app.
+Your job is to extract slot information from a user transcript.
+
+Rules:
+- Respond with JSON ONLY using the schema provided.
+- Do not generate ISO dates. Always return natural text in dueText.
+- Do not generate child IDs. Only return assignedChildName if heard.
+- Title must be the actual task, not placeholders like "task" or "chore".
+- Points must be integers if given.
+- Intent must be "new_task", "answer", or "cancel".
+- If any required info is missing, set needsFollowup=true and ask ONE short question.
+
+AVAILABLE CHILDREN: ${childrenRoster.map(c => c.name).join(', ')}
+
+Examples:
+User: "Create task for Emma tomorrow worth 20 points"
+→ {"intent": "new_task", "slot_updates": {"assignedChildName":"Emma","dueText":"tomorrow","points":20}}
+
+User: "Clean her room"
+→ {"intent": "answer", "slot_updates": {"title":"clean her room"}}
+
+User: "Make Zayn take out trash on October 8"
+→ {"intent": "new_task", "slot_updates": {"assignedChildName":"Zayn","title":"take out trash","dueText":"October 8"}}
+
+User: "15 points"
+→ {"intent": "answer", "slot_updates": {"points":15}}
+
+User: "cancel"
+→ {"intent": "cancel", "slot_updates": {}}`;
+        const userPrompt = `Transcript: "${utterance}"
+
+Extract slot information from this transcript.`;
         try {
             const result = await this.model.generateContent([systemPrompt, userPrompt]);
             const response = await result.response;

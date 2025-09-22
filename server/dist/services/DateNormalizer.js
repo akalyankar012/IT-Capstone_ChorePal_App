@@ -75,8 +75,15 @@ class DateNormalizer {
                     const day = parseInt(dayMatch[1]);
                     const time = this.extractTime(dueText) || '18:00';
                     const [hours, minutes] = time.split(':').map(Number);
-                    // Create date directly in UTC to avoid timezone conversion issues
-                    const dueDate = new Date(Date.UTC(now.getFullYear(), i, day, hours, minutes, 0, 0));
+                    // Validate day for the month
+                    const daysInMonth = new Date(now.getFullYear(), i + 1, 0).getDate();
+                    if (day > daysInMonth) {
+                        console.log(`⚠️ Invalid date: ${monthName} ${day} (${monthName} only has ${daysInMonth} days)`);
+                        // For now, we'll let JavaScript handle the correction, but log the issue
+                        // In the future, we could throw an error or ask for clarification
+                    }
+                    // Create date in local timezone, then convert to UTC
+                    const dueDate = new Date(now.getFullYear(), i, day, hours, minutes, 0, 0);
                     console.log(`🗓️ Month name parsing:`, {
                         input: dueText,
                         monthName,
@@ -85,7 +92,8 @@ class DateNormalizer {
                         hours,
                         minutes,
                         dueDate: dueDate.toISOString(),
-                        localDate: dueDate.toLocaleString()
+                        localDate: dueDate.toLocaleString(),
+                        corrected: day > daysInMonth ? `${monthNames[dueDate.getMonth()]} ${dueDate.getDate()}` : null
                     });
                     return dueDate.toISOString();
                 }

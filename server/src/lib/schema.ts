@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Task fields schema
+// Task fields schema (final output)
 export const TaskFieldsSchema = z.object({
   childId: z.string().min(1, 'Child ID is required'),
   title: z.string().min(1, 'Title is required'),
@@ -8,7 +8,8 @@ export const TaskFieldsSchema = z.object({
   points: z.number().int().min(1, 'Points must be a positive integer')
 });
 
-// Parse result schemas
+
+// Parse result schemas (legacy - keeping for compatibility)
 export const ParseResultSchema = z.discriminatedUnion('needsFollowup', [
   z.object({
     needsFollowup: z.literal(true),

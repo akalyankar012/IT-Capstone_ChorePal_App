@@ -142,22 +142,28 @@ class VoiceMergeLogic {
         };
     }
     formatDueDate(dueIso, dueText) {
-        if (dueText)
-            return dueText;
+        // Always use the parsed ISO date for accurate time formatting
         if (!dueIso)
-            return 'today';
+            return dueText || 'today';
         const dueDate = new Date(dueIso);
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+        // Format time in 12-hour format
+        const timeString = dueDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'America/Chicago'
+        });
         if (dueDate.toDateString() === today.toDateString()) {
-            return 'today';
+            return `today at ${timeString}`;
         }
         else if (dueDate.toDateString() === tomorrow.toDateString()) {
-            return 'tomorrow';
+            return `tomorrow at ${timeString}`;
         }
         else {
-            return dueDate.toLocaleDateString();
+            return `${dueDate.toLocaleDateString()} at ${timeString}`;
         }
     }
     generateFollowUpQuestion(expectedSlot) {
@@ -184,14 +190,21 @@ class VoiceMergeLogic {
             const dueDate = new Date(slots.dueIso);
             const isToday = dueDate.toDateString() === new Date().toDateString();
             const isTomorrow = dueDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
+            // Format time in 12-hour format
+            const timeString = dueDate.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+                timeZone: 'America/Chicago'
+            });
             if (isToday) {
-                dueText = ' due today';
+                dueText = ` due today at ${timeString}`;
             }
             else if (isTomorrow) {
-                dueText = ' due tomorrow';
+                dueText = ` due tomorrow at ${timeString}`;
             }
             else {
-                dueText = ` due ${dueDate.toLocaleDateString()}`;
+                dueText = ` due ${dueDate.toLocaleDateString()} at ${timeString}`;
             }
         }
         return `Added '${title}' for ${childName}${dueText}, for ${points} points.`;
