@@ -12,6 +12,8 @@ struct ChildDashboardView: View {
     @AppStorage("selectedTheme") private var selectedTheme: AppTheme = .light
     @State private var selectedTab = 0
     @State private var isAnimating = false
+    @State private var showApprovalCelebration = false
+    @State private var newlyApprovedChores: [Chore] = []
 
     private let themeColor = Color(hex: "#a2cee3")
 
@@ -88,8 +90,55 @@ struct ChildDashboardView: View {
                 }
             }
             .navigationBarHidden(true)
+            .onAppear {
+                checkForNewApprovals()
+            }
         }
         .preferredColorScheme(selectedTheme == .light ? .light : .dark)
+        .overlay(
+            Group {
+                if showApprovalCelebration {
+                    ApprovalCelebrationModal(
+                        approvedChores: newlyApprovedChores,
+                        totalPoints: newlyApprovedChores.reduce(0) { $0 + $1.points },
+                        isPresented: $showApprovalCelebration
+                    )
+                    .transition(.opacity)
+                    .zIndex(999)
+                }
+            }
+        )
+    }
+    
+    private func checkForNewApprovals() {
+        guard let childId = authService.currentChild?.id else { return }
+        
+        // Get last check time from UserDefaults
+        let lastCheckKey = "lastApprovalCheck_\(childId.uuidString)"
+        let lastCheckTime = UserDefaults.standard.double(forKey: lastCheckKey)
+        let lastCheck = lastCheckTime > 0 ? Date(timeIntervalSince1970: lastCheckTime) : Date.distantPast
+        
+        // Find chores that were approved since last check
+        let approvedSinceLastCheck = choreService.chores.filter { chore in
+            chore.assignedToChildId == childId &&
+            chore.photoProofStatus == .approved &&
+            chore.isCompleted
+        }
+        
+        // For MVP, show if there are any approved chores (simplified logic)
+        if !approvedSinceLastCheck.isEmpty {
+            newlyApprovedChores = approvedSinceLastCheck
+            
+            // Small delay for smooth appearance
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                    showApprovalCelebration = true
+                }
+            }
+            
+            // Update last check time
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastCheckKey)
+        }
     }
 
     private func childTabButton(_ title: String, icon: String, id: Int) -> some View {
