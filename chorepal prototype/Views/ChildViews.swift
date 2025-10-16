@@ -158,7 +158,6 @@ struct ChildChoresLiteView: View {
     @State private var showSuccessBanner = false
     @State private var completedChorePoints = 0
     @State private var selectedChoreForPhoto: Chore?
-    @State private var showPhotoCapture = false
     private let themeColor = Color(hex: "#a2cee3")
 
     var body: some View {
@@ -220,13 +219,16 @@ struct ChildChoresLiteView: View {
                 }
             }
         }
-        .fullScreenCover(isPresented: $showPhotoCapture) {
-            if let chore = selectedChoreForPhoto, let childId = authService.currentChild?.id {
+        .fullScreenCover(item: $selectedChoreForPhoto) { chore in
+            if let childId = authService.currentChild?.id {
                 PhotoCaptureFlow(
                     chore: chore,
                     childId: childId,
                     photoApprovalService: photoApprovalService
                 )
+            } else {
+                Text("Error: No child logged in")
+                    .foregroundColor(.red)
             }
         }
     }
@@ -244,11 +246,7 @@ struct ChildChoresLiteView: View {
         case .notSubmitted:
             // Show "Upload Photo" button
             Button(action: {
-                // Set chore first, then present sheet on next run loop
                 selectedChoreForPhoto = chore
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
-                    showPhotoCapture = true
-                }
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: "photo.badge.arrow.down")
@@ -294,11 +292,7 @@ struct ChildChoresLiteView: View {
         case .rejected:
             // Show rejected status with option to retake
             Button(action: {
-                // Set chore first, then present sheet on next run loop
                 selectedChoreForPhoto = chore
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
-                    showPhotoCapture = true
-                }
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: "xmark.seal.fill")
