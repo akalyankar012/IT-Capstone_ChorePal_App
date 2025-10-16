@@ -113,31 +113,35 @@ struct ChildDashboardView: View {
     private func checkForNewApprovals() {
         guard let childId = authService.currentChild?.id else { return }
         
-        // Get last check time from UserDefaults
-        let lastCheckKey = "lastApprovalCheck_\(childId.uuidString)"
-        let lastCheckTime = UserDefaults.standard.double(forKey: lastCheckKey)
-        let lastCheck = lastCheckTime > 0 ? Date(timeIntervalSince1970: lastCheckTime) : Date.distantPast
-        
-        // Find chores that were approved since last check
-        let approvedSinceLastCheck = choreService.chores.filter { chore in
-            chore.assignedToChildId == childId &&
-            chore.photoProofStatus == .approved &&
-            chore.isCompleted
-        }
-        
-        // For MVP, show if there are any approved chores (simplified logic)
-        if !approvedSinceLastCheck.isEmpty {
-            newlyApprovedChores = approvedSinceLastCheck
+        // Wait a bit for chores to load from Firestore
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            // Get last check time from UserDefaults
+            let lastCheckKey = "lastApprovalCheck_\(childId.uuidString)"
+            let hasShownBefore = UserDefaults.standard.bool(forKey: lastCheckKey)
             
-            // Small delay for smooth appearance
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                    showApprovalCelebration = true
-                }
+            // Find chores that were approved
+            let approvedChores = self.choreService.chores.filter { chore in
+                chore.assignedToChildId == childId &&
+                chore.photoProofStatus == .approved &&
+                chore.isCompleted
             }
             
-            // Update last check time
-            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastCheckKey)
+            print("🎉 Found \(approvedChores.count) approved chores for celebration check")
+            
+            // Show modal if there are approved chores and we haven't shown it yet this session
+            if !approvedChores.isEmpty && !hasShownBefore {
+                self.newlyApprovedChores = approvedChores
+                
+                // Small delay for smooth appearance
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        self.showApprovalCelebration = true
+                    }
+                }
+                
+                // Mark as shown for this session
+                UserDefaults.standard.set(true, forKey: lastCheckKey)
+            }
         }
     }
 

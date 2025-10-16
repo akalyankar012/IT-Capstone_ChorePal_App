@@ -20,7 +20,6 @@ class NotificationService: ObservableObject {
         
         notificationsListener = db.collection("notifications")
             .whereField("userId", isEqualTo: userId.uuidString)
-            .order(by: "timestamp", descending: true)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
                 
@@ -34,7 +33,7 @@ class NotificationService: ObservableObject {
                     return
                 }
                 
-                self.notifications = documents.compactMap { doc -> AppNotification? in
+                var loadedNotifications = documents.compactMap { doc -> AppNotification? in
                     let data = doc.data()
                     
                     guard let userIdString = data["userId"] as? String,
@@ -63,6 +62,10 @@ class NotificationService: ObservableObject {
                     )
                 }
                 
+                // Sort by timestamp descending (newest first)
+                loadedNotifications.sort { $0.timestamp > $1.timestamp }
+                
+                self.notifications = loadedNotifications
                 self.updateUnreadCount()
                 print("✅ Loaded \(self.notifications.count) notifications")
             }
@@ -145,11 +148,10 @@ class NotificationService: ObservableObject {
         do {
             let snapshot = try await db.collection("notifications")
                 .whereField("userId", isEqualTo: userId.uuidString)
-                .order(by: "timestamp", descending: true)
                 .limit(to: 50)
                 .getDocuments()
             
-            notifications = snapshot.documents.compactMap { doc -> AppNotification? in
+            var loadedNotifications = snapshot.documents.compactMap { doc -> AppNotification? in
                 let data = doc.data()
                 
                 guard let userIdString = data["userId"] as? String,
@@ -178,6 +180,10 @@ class NotificationService: ObservableObject {
                 )
             }
             
+            // Sort by timestamp descending (newest first)
+            loadedNotifications.sort { $0.timestamp > $1.timestamp }
+            
+            notifications = loadedNotifications
             updateUnreadCount()
             print("✅ Fetched \(notifications.count) notifications")
             
