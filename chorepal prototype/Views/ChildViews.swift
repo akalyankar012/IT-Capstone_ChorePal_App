@@ -224,7 +224,9 @@ struct ChildChoresLiteView: View {
                 PhotoCaptureFlow(
                     chore: chore,
                     childId: childId,
-                    photoApprovalService: photoApprovalService
+                    photoApprovalService: photoApprovalService,
+                    choreService: choreService,
+                    authService: authService
                 )
             } else {
                 Text("Error: No child logged in")

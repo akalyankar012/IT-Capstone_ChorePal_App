@@ -243,7 +243,7 @@ struct PhotoApprovalDetailView: View {
                         updatedChore.parentFeedback = feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : feedbackText
                         choreService.updateChore(updatedChore)
                         
-                        // TODO: Send notification to child
+                        // TODO: Send in-app notification to child
                     }
                     
                     onDismiss()
@@ -290,7 +290,7 @@ struct PhotoApprovalDetailView: View {
                         choreService.updateChore(updatedChore)
                     }
                     
-                    // TODO: Send notification to child
+                    // TODO: Send in-app notification to child
                     
                     onDismiss()
                 } else {

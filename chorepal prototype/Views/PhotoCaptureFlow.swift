@@ -7,6 +7,8 @@ struct PhotoCaptureFlow: View {
     let chore: Chore
     let childId: UUID
     @ObservedObject var photoApprovalService: PhotoApprovalService
+    @ObservedObject var choreService: ChoreService
+    @ObservedObject var authService: AuthService
     @Environment(\.dismiss) private var dismiss
     
     @State private var showCamera = false
@@ -240,6 +242,13 @@ struct PhotoCaptureFlow: View {
                 isUploading = false
                 
                 if success {
+                    // Update chore status to pending
+                    var updatedChore = chore
+                    updatedChore.photoProofStatus = .pending
+                    choreService.updateChore(updatedChore)
+                    
+                    // TODO: Send in-app notification to parent
+                    
                     uploadSuccess = true
                 } else {
                     errorMessage = "Failed to upload photo. Please check your connection and try again."
