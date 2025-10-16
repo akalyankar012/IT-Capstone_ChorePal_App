@@ -200,6 +200,7 @@ struct ChildSettingsLiteView: View {
                         }
                     ))
                 }
+                .listRowBackground(Color(.systemBackground).opacity(0.7))
             }
             Section {
                 Button(action: {
@@ -210,8 +211,10 @@ struct ChildSettingsLiteView: View {
                         Text("Sign Out").foregroundColor(.red)
                     }
                 }
+                .listRowBackground(Color(.systemBackground).opacity(0.7))
             }
         }
+        .scrollContentBackground(.hidden)
     }
 }
 
