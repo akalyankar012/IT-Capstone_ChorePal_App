@@ -17,20 +17,11 @@ struct StatisticsView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Time Range Selector
-                    TimeRangeSelector(selectedRange: $selectedTimeRange)
-                    
                     // Family Overview Stats
                     FamilyOverviewStats(
                         choreService: choreService,
                         rewardService: rewardService,
                         authService: authService
-                    )
-                    
-                    // Chore Performance Chart
-                    ChorePerformanceChart(
-                        choreService: choreService,
-                        timeRange: selectedTimeRange
                     )
                     
                     // Child Performance Comparison
@@ -40,19 +31,14 @@ struct StatisticsView: View {
                         selectedChild: $selectedChild
                     )
                     
-                    // Reward Statistics
-                    RewardStatistics(
-                        rewardService: rewardService,
-                        authService: authService
-                    )
-                    
-                    // Recent Activity
-                    RecentActivitySection(
+                    // Chore Performance Chart
+                    ChorePerformanceChart(
                         choreService: choreService,
-                        rewardService: rewardService
+                        timeRange: selectedTimeRange
                     )
                 }
                 .padding(.horizontal, 20)
+                .padding(.top, 20)
                 .padding(.bottom, 100)
             }
             .background(Color(.systemGroupedBackground))
@@ -444,66 +430,143 @@ struct ChildPerformanceRow: View {
     
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 16) {
-                // Child Avatar
-                Circle()
-                    .fill(themeColor.opacity(0.15))
-                    .frame(width: 48, height: 48)
-                    .overlay(
-                        Text(String(child.name.prefix(1)).uppercased())
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(themeColor)
-                    )
-                
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(child.name)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.primary)
-                    
-                    HStack(spacing: 20) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "star.fill")
-                                .font(.caption)
-                                .foregroundColor(.yellow)
-                                .frame(width: 14, height: 14)
-                            Text("\(child.points) pts")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(.secondary)
-                        }
+            VStack(spacing: 14) {
+                HStack(spacing: 14) {
+                    // Child Avatar
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [themeColor.opacity(0.3), themeColor.opacity(0.15)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 52, height: 52)
                         
-                        HStack(spacing: 6) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.caption)
-                                .foregroundColor(.green)
-                                .frame(width: 14, height: 14)
-                            Text("\(completedChores) completed")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(.secondary)
+                        Text(String(child.name.prefix(1)).uppercased())
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(themeColor)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(child.name)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.primary)
+                        
+                        HStack(spacing: 8) {
+                            HStack(spacing: 4) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.yellow.opacity(0.15))
+                                        .frame(width: 20, height: 20)
+                                    
+                                    Image(systemName: "star.fill")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.yellow)
+                                }
+                                Text("\(child.points)")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.primary)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.yellow.opacity(0.1))
+                            .cornerRadius(12)
                         }
                     }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(themeColor)
                 }
                 
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                // Stats row
+                HStack(spacing: 12) {
+                    StatBadge(
+                        icon: "checkmark.circle.fill",
+                        value: completedChores,
+                        label: "Done",
+                        color: .green
+                    )
+                    
+                    StatBadge(
+                        icon: "clock.fill",
+                        value: activeChores,
+                        label: "Active",
+                        color: .orange
+                    )
+                    
+                    StatBadge(
+                        icon: "flame.fill",
+                        value: completionRate,
+                        label: "Rate",
+                        color: completionRate >= 70 ? .green : .orange,
+                        suffix: "%"
+                    )
+                }
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
+            .padding(14)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.systemBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(themeColor.opacity(0.2), lineWidth: 1.5)
+                    )
             )
+            .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
         }
         .buttonStyle(PlainButtonStyle())
     }
     
     private var completedChores: Int {
         choreService.getChoresForChild(child.id).filter { $0.isCompleted }.count
+    }
+    
+    private var activeChores: Int {
+        choreService.getChoresForChild(child.id).filter { !$0.isCompleted }.count
+    }
+    
+    private var completionRate: Int {
+        let total = choreService.getChoresForChild(child.id).count
+        return total > 0 ? Int((Double(completedChores) / Double(total)) * 100) : 0
+    }
+}
+
+// MARK: - Stat Badge
+struct StatBadge: View {
+    let icon: String
+    let value: Int
+    let label: String
+    let color: Color
+    var suffix: String = ""
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundColor(color)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(value)\(suffix)")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.primary)
+                
+                Text(label)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(color.opacity(0.08))
+        )
     }
 }
 

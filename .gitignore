@@ -13,3 +13,4 @@ xcuserdata/
 .env.staging
 server/.env
 server/.env.local
+build.log

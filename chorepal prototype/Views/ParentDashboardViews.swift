@@ -170,9 +170,8 @@ struct ParentDashboardView: View {
                     )
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 20)
-                .background(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
                 
                 // Tab Content
                 TabView(selection: $selectedTab) {
@@ -981,6 +980,7 @@ struct ParentOverviewView: View {
             VStack(spacing: 20) {
                 // Quick Actions Section (moved to top)
                 QuickActionsSection(choreService: choreService, authService: authService)
+                    .padding(.top, 12)
                 
                 // Family Overview Card
                 FamilyOverviewCard(authService: authService, choreService: choreService)
@@ -997,7 +997,7 @@ struct ParentOverviewView: View {
             }
             .padding(.horizontal, 20)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .refreshable {
             // Simple refresh with animation
             try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
