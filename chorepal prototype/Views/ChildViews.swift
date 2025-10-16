@@ -111,25 +111,33 @@ struct ChildDashboardView: View {
     }
     
     private func checkForNewApprovals() {
-        guard let childId = authService.currentChild?.id else { return }
+        guard let childId = authService.currentChild?.id else {
+            print("❌ No child logged in for celebration check")
+            return
+        }
+        
+        print("🎉 DEBUG: Starting celebration check for child: \(childId)")
         
         // Wait a bit for chores to load from Firestore
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            // Get last check time from UserDefaults
-            let lastCheckKey = "lastApprovalCheck_\(childId.uuidString)"
-            let hasShownBefore = UserDefaults.standard.bool(forKey: lastCheckKey)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            print("🎉 DEBUG: Total chores loaded: \(self.choreService.chores.count)")
+            
+            // Find ALL chores for this child
+            let childChores = self.choreService.chores.filter { $0.assignedToChildId == childId }
+            print("🎉 DEBUG: Child's chores: \(childChores.count)")
             
             // Find chores that were approved
-            let approvedChores = self.choreService.chores.filter { chore in
-                chore.assignedToChildId == childId &&
-                chore.photoProofStatus == .approved &&
-                chore.isCompleted
+            let approvedChores = childChores.filter { chore in
+                let isApproved = chore.photoProofStatus == .approved
+                print("🎉 DEBUG: Chore '\(chore.title)' - status: \(String(describing: chore.photoProofStatus)), completed: \(chore.isCompleted), approved: \(isApproved)")
+                return isApproved && chore.isCompleted
             }
             
-            print("🎉 Found \(approvedChores.count) approved chores for celebration check")
+            print("🎉 DEBUG: Found \(approvedChores.count) approved chores")
             
-            // Show modal if there are approved chores and we haven't shown it yet this session
-            if !approvedChores.isEmpty && !hasShownBefore {
+            // Show modal if there are approved chores
+            if !approvedChores.isEmpty {
+                print("🎉 DEBUG: Showing celebration modal!")
                 self.newlyApprovedChores = approvedChores
                 
                 // Small delay for smooth appearance
@@ -138,9 +146,8 @@ struct ChildDashboardView: View {
                         self.showApprovalCelebration = true
                     }
                 }
-                
-                // Mark as shown for this session
-                UserDefaults.standard.set(true, forKey: lastCheckKey)
+            } else {
+                print("🎉 DEBUG: No approved chores to celebrate")
             }
         }
     }
