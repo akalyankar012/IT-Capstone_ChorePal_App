@@ -6,5 +6,11 @@
 	<array>
 		<dict/>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>ChorePal needs camera access to take photos of completed tasks for parent approval.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ChorePal needs photo library access to save and upload task completion photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>ChorePal needs permission to save photos to your library.</string>
 </dict>
 </plist>
