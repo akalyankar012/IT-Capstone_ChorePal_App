@@ -276,6 +276,7 @@ struct CalendarView: View {
     let role: UserRole
     @Binding var chores: [Chore]
     @ObservedObject var achievementManager: AchievementManager
+    @AppStorage("selectedTheme") private var selectedTheme: Theme = .light
     private let themeColor = Color(hex: "#a2cee3")
     @State private var selectedChore: Chore?
     @State private var currentMonth = Date()
@@ -371,6 +372,7 @@ struct CalendarView: View {
                 
                 Text(monthString)
                     .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(selectedTheme == .light ? .primary : .white)
                 
                 Spacer()
                 
@@ -394,7 +396,7 @@ struct CalendarView: View {
                     ForEach(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], id: \.self) { day in
                         Text(day)
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.gray)
+                            .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
                             .frame(maxWidth: .infinity)
                     }
                 }
@@ -412,15 +414,15 @@ struct CalendarView: View {
                             let hasChoresDueToday = chores.contains { isSameDay(date, $0.dueDate) }
                             
                             Text("\(day)")
-                                .font(.system(size: 16))
+                                .font(.system(size: 16, weight: .medium))
                                 .frame(height: 36)
                                 .frame(maxWidth: .infinity)
                                 .background(
                                     Circle()
-                                        .fill(isSelectedDate ? themeColor : (hasChoresDueToday ? themeColor.opacity(0.2) : Color.clear))
+                                        .fill(isSelectedDate ? themeColor : (hasChoresDueToday ? themeColor.opacity(0.3) : Color.clear))
                                         .frame(width: 36, height: 36)
                                 )
-                                .foregroundColor(isSelectedDate ? .white : .primary)
+                                .foregroundColor(isSelectedDate ? .white : (selectedTheme == .light ? .primary : .white))
                         } else {
                             Color.clear
                                 .frame(maxWidth: .infinity)
@@ -647,6 +649,7 @@ struct ChoreRowView: View {
     let chore: Chore
     let onToggleComplete: (Bool) -> Void
     @State private var isCompleted: Bool
+    @AppStorage("selectedTheme") private var selectedTheme: Theme = .light
     private let themeColor = Color(hex: "#a2cee3")
     
     init(chore: Chore, onToggleComplete: @escaping (Bool) -> Void) {
@@ -659,13 +662,13 @@ struct ChoreRowView: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(chore.title)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 17, weight: .bold))
                     .strikethrough(isCompleted)
-                    .foregroundColor(isCompleted ? .gray : .primary)
+                    .foregroundColor(isCompleted ? (selectedTheme == .light ? .gray : Color.white.opacity(0.5)) : (selectedTheme == .light ? .primary : .white))
                 
                 Text(chore.description)
-                    .font(.system(size: 15))
-                    .foregroundColor(.gray)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(selectedTheme == .light ? Color(.systemGray) : Color.white.opacity(0.8))
                 
                 HStack(spacing: 4) {
                     Image(systemName: "clock")
@@ -674,8 +677,8 @@ struct ChoreRowView: View {
                     Text("•")
                     Text("Created: \(chore.createdAt, style: .date)")
                 }
-                .font(.system(size: 12))
-                .foregroundColor(Color(.systemGray2))
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(selectedTheme == .light ? Color(.systemGray2) : Color.white.opacity(0.7))
             }
             
             Spacer()
@@ -706,15 +709,16 @@ struct ChoreRowView: View {
                 .buttonStyle(.plain)
                 
                 Text("\(chore.points) pts")
-                    .font(.system(size: 13, weight: .medium))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color(.systemGray6))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(themeColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(themeColor.opacity(0.15))
                     .cornerRadius(8)
                 
                 Text(chore.isRequired ? "Required" : "Elective")
-                    .font(.system(size: 12))
-                    .foregroundColor(Color(.systemGray2))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(selectedTheme == .light ? Color(.systemGray2) : Color.white.opacity(0.6))
             }
         }
         .padding(.vertical, 8)
