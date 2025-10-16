@@ -30,23 +30,29 @@ struct PhotoCaptureFlow: View {
                     VStack(spacing: 24) {
                         Spacer()
                         
+                        Text("DEBUG: PhotoCaptureFlow is showing!")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding()
+                            .background(Color.yellow)
+                        
                         ZStack {
                             Circle()
                                 .fill(themeColor.opacity(0.15))
                                 .frame(width: 120, height: 120)
                             
-                            Image(systemName: "camera.fill")
+                            Image(systemName: "photo.on.rectangle.angled")
                                 .font(.system(size: 50))
                                 .foregroundColor(themeColor)
                         }
                         
                         VStack(spacing: 12) {
-                            Text("Take a Photo")
+                            Text("Upload Photo Proof")
                                 .font(.title2)
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             
-                            Text("Show that you completed:")
+                            Text("Select a photo to prove you completed:")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             
@@ -65,19 +71,34 @@ struct PhotoCaptureFlow: View {
                             showCamera = true
                             print("🔘 DEBUG: showCamera is now: \(showCamera)")
                         }) {
-                            HStack {
+                            HStack(spacing: 12) {
                                 Image(systemName: "photo.on.rectangle.angled")
-                                Text("Upload Photo")
+                                    .font(.title3)
+                                Text("UPLOAD PHOTO")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
                             }
-                            .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(themeColor)
-                            .cornerRadius(12)
+                            .padding(.vertical, 18)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.blue.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(16)
+                            .shadow(color: .blue.opacity(0.4), radius: 8, x: 0, y: 4)
                         }
                         .padding(.horizontal, 20)
                         .padding(.bottom, 40)
+                        
+                        Text("DEBUG: Tap the blue button above")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                            .padding()
+                            .background(Color.black.opacity(0.1))
                     }
                 } else {
                     // Photo captured - show preview
