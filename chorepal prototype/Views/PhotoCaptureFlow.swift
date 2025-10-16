@@ -59,7 +59,12 @@ struct PhotoCaptureFlow: View {
                         
                         Spacer()
                         
-                        Button(action: { showCamera = true }) {
+                        Button(action: {
+                            print("🔘 DEBUG: Upload Photo button tapped")
+                            print("🔘 DEBUG: Setting showCamera = true")
+                            showCamera = true
+                            print("🔘 DEBUG: showCamera is now: \(showCamera)")
+                        }) {
                             HStack {
                                 Image(systemName: "photo.on.rectangle.angled")
                                 Text("Upload Photo")
@@ -263,16 +268,21 @@ struct CameraPicker: UIViewControllerRepresentable {
         picker.sourceType = .photoLibrary
         picker.allowsEditing = false
         picker.delegate = context.coordinator
-        picker.modalPresentationStyle = .fullScreen
+        
+        // IMPORTANT: Don't set modalPresentationStyle when used in a sheet
+        // The sheet handles the presentation
         
         print("✅ DEBUG: UIImagePickerController configured for photo library")
         return picker
     }
     
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
+        print("📸 DEBUG: updateUIViewController called")
+    }
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+        print("📸 DEBUG: Creating Coordinator")
+        return Coordinator(self)
     }
     
     class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
@@ -280,16 +290,23 @@ struct CameraPicker: UIViewControllerRepresentable {
         
         init(_ parent: CameraPicker) {
             self.parent = parent
+            super.init()
+            print("📸 DEBUG: Coordinator initialized")
         }
         
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            print("✅ DEBUG: Image picked!")
             if let uiImage = info[.originalImage] as? UIImage {
+                print("✅ DEBUG: Got UIImage: \(uiImage.size)")
                 parent.image = uiImage
+            } else {
+                print("❌ DEBUG: Failed to get image from info")
             }
             parent.dismiss()
         }
         
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            print("⚠️ DEBUG: User cancelled picker")
             parent.dismiss()
         }
     }
