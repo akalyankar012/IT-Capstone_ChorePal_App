@@ -3,14 +3,14 @@ import Combine
 
 // MARK: - Voice Configuration
 struct VoiceConfig {
-    static let apiBaseURL = "http://localhost:3000"
+    static let apiBaseURL = "http://192.168.1.176:3000"
 }
 
 // MARK: - Voice Configuration Service
 class VoiceConfigService: ObservableObject {
     static let shared = VoiceConfigService()
     
-    @Published var apiBaseURL = "http://localhost:3000"
+    @Published var apiBaseURL = "http://192.168.1.176:3000"
     
     var healthEndpoint: String {
         "\(apiBaseURL)/health"
