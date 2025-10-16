@@ -164,40 +164,127 @@ struct ChildRewardsLiteView: View {
     @ObservedObject var rewardService: RewardService
     @ObservedObject var authService: AuthService
     @AppStorage("selectedTheme") private var selectedTheme: AppTheme = .light
+    @State private var selectedRewardTab = 0 // 0 = Available, 1 = My Rewards
+    @State private var showingRedeemConfirm = false
+    @State private var selectedReward: Reward?
+    @State private var showingSuccessAlert = false
+    @State private var alertMessage = ""
+    
     private let themeColor = Color(hex: "#a2cee3")
+    
+    private var currentPoints: Int {
+        authService.currentChild?.points ?? 0
+    }
+    
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                ForEach(rewardService.getAvailableRewards()) { reward in
-                    HStack(spacing: 12) {
-                        Image(systemName: reward.category.icon)
-                            .foregroundColor(Color(hex: reward.category.color))
-                            .frame(width: 40, height: 40)
-                            .background(Color(hex: reward.category.color).opacity(0.2)).cornerRadius(8)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(reward.name)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(selectedTheme == .light ? .primary : .white)
-                            if !reward.description.isEmpty {
-                                Text(reward.description)
-                                    .font(.caption)
-                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
-                            }
-                            Text("\(reward.points) pts")
-                                .font(.caption)
-                                .foregroundColor(themeColor)
-                        }
-                        Spacer()
-                    }
-                    .padding(12)
-                    .background(Color(.systemBackground).opacity(selectedTheme == .light ? 0.9 : 0.2))
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-                }
-                Spacer(minLength: 80)
+        VStack(spacing: 0) {
+            // Points display at top
+            HStack {
+                Image(systemName: "star.fill").foregroundColor(.yellow).font(.title3)
+                Text("\(currentPoints) Points Available")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(selectedTheme == .light ? .primary : .white)
+            }
+            .padding(.vertical, 12)
+            
+            // Tab selector
+            HStack(spacing: 0) {
+                rewardTabButton("Available", id: 0)
+                rewardTabButton("My Rewards", id: 1)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 12)
+            .padding(.bottom, 12)
+            
+            // Content
+            ScrollView {
+                VStack(spacing: 12) {
+                    if selectedRewardTab == 0 {
+                        // Available Rewards
+                        ForEach(rewardService.getAvailableRewards()) { reward in
+                            ChildRewardCard(
+                                reward: reward,
+                                currentPoints: currentPoints,
+                                selectedTheme: selectedTheme,
+                                themeColor: themeColor,
+                                onRedeem: {
+                                    selectedReward = reward
+                                    showingRedeemConfirm = true
+                                }
+                            )
+                        }
+                    } else {
+                        // My Rewards (redeemed)
+                        let myRewards = rewardService.getRewardsForChild(authService.currentChild?.id ?? UUID())
+                        if myRewards.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "gift.fill")
+                                    .font(.system(size: 48))
+                                    .foregroundColor(themeColor.opacity(0.5))
+                                Text("No rewards yet!")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
+                                Text("Complete chores to earn points and redeem rewards")
+                                    .font(.caption)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.6))
+                                    .padding(.horizontal, 40)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 60)
+                        } else {
+                            ForEach(myRewards) { reward in
+                                RedeemedRewardCard(reward: reward, selectedTheme: selectedTheme, themeColor: themeColor)
+                            }
+                        }
+                    }
+                    Spacer(minLength: 80)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+            }
+        }
+        .alert("Redeem Reward?", isPresented: $showingRedeemConfirm, presenting: selectedReward) { reward in
+            Button("Cancel", role: .cancel) { }
+            Button("Redeem \(reward.points) pts") {
+                redeemReward(reward)
+            }
+        } message: { reward in
+            Text("Are you sure you want to redeem '\(reward.name)' for \(reward.points) points?")
+        }
+        .alert("Success!", isPresented: $showingSuccessAlert) {
+            Button("OK") { }
+        } message: {
+            Text(alertMessage)
+        }
+    }
+    
+    private func rewardTabButton(_ title: String, id: Int) -> some View {
+        Button(action: { withAnimation { selectedRewardTab = id } }) {
+            Text(title)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(selectedRewardTab == id ? themeColor : (selectedTheme == .light ? .gray : Color.white.opacity(0.6)))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(selectedRewardTab == id ? themeColor.opacity(0.15) : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private func redeemReward(_ reward: Reward) {
+        guard let child = authService.currentChild else { return }
+        
+        let success = rewardService.redeemReward(reward, byChild: child, authService: authService)
+        
+        if success {
+            alertMessage = "🎉 You redeemed '\(reward.name)'! Enjoy your reward."
+            showingSuccessAlert = true
+        } else {
+            alertMessage = "❌ Not enough points to redeem this reward."
+            showingSuccessAlert = true
         }
     }
 }
