@@ -62,20 +62,24 @@ struct ChildDashboardView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 20)
 
-                    TabView(selection: $selectedTab) {
-                        // Reuse existing simplified Home/Calendar/Settings patterns where possible
-                        ChildChoresLiteView(choreService: choreService, authService: authService)
-                            .tag(0)
-                        ChildRewardsLiteView(rewardService: rewardService, authService: authService)
-                            .tag(1)
-                        AchievementsView(achievementManager: AchievementManager())
-                            .tag(2)
-                        CalendarView(role: .child, chores: .constant(Chore.sampleChores), achievementManager: AchievementManager())
-                            .tag(3)
-                        ChildSettingsLiteView(selectedTheme: $selectedTheme, authService: authService, isAnimating: $isAnimating, selectedRole: $selectedRole)
-                            .tag(4)
+                    // Content view based on selected tab (no swipe-through)
+                    Group {
+                        switch selectedTab {
+                        case 0:
+                            ChildChoresLiteView(choreService: choreService, authService: authService)
+                        case 1:
+                            ChildRewardsLiteView(rewardService: rewardService, authService: authService)
+                        case 2:
+                            AchievementsView(achievementManager: AchievementManager())
+                        case 3:
+                            CalendarView(role: .child, chores: .constant(Chore.sampleChores), achievementManager: AchievementManager())
+                        case 4:
+                            ChildSettingsLiteView(selectedTheme: $selectedTheme, authService: authService, isAnimating: $isAnimating, selectedRole: $selectedRole)
+                        default:
+                            ChildChoresLiteView(choreService: choreService, authService: authService)
+                        }
                     }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    .transition(.opacity)
                 }
             }
             .navigationBarHidden(true)
