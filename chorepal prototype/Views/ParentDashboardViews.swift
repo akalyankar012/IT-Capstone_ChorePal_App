@@ -76,17 +76,18 @@ struct ParentDashboardView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header
+                // Header with gradient background
                 VStack(spacing: 16) {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Welcome back, \(authService.currentParent?.phoneNumber ?? "Parent")!")
                                 .font(.title2)
-                                .foregroundColor(.gray)
+                                .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
                             
                             Text("Family Dashboard")
-                                .font(.system(size: 28, weight: .bold))
+                                .font(.system(size: 32, weight: .heavy))
                                 .foregroundColor(themeColor)
+                                .shadow(color: themeColor.opacity(0.3), radius: 2, x: 0, y: 1)
                         }
                         
                         Spacer()
@@ -127,12 +128,23 @@ struct ParentDashboardView: View {
                                 .foregroundColor(selectedTheme == .light ? Color(hex: "#a2cee3") : Color(hex: "#3b82f6"))
                                 .padding()
                                 .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                                .scaleEffect(isAnimating ? 1.1 : 1.0)
                         }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                 }
                 .padding(.bottom, 16)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            themeColor.opacity(0.08),
+                            Color.clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
                 
                 // Tab Selector
                 HStack(spacing: 0) {
@@ -159,6 +171,8 @@ struct ParentDashboardView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
+                .background(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
                 
                 // Tab Content
                 TabView(selection: $selectedTab) {
@@ -255,7 +269,7 @@ struct FamilyOverviewCard: View {
         .padding(20)
         .background(Color(.systemBackground))
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
     
     private var totalFamilyPoints: Int {
@@ -273,23 +287,43 @@ struct StatCard: View {
     let color: Color
     
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(color)
+        VStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(color)
+            }
             
             Text(value)
-                .font(.system(size: 24, weight: .bold))
+                .font(.system(size: 28, weight: .heavy))
                 .foregroundColor(.primary)
             
             Text(title)
-                .font(.caption)
-                .foregroundColor(.gray)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .padding(.vertical, 16)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.systemBackground))
+                
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.06), color.opacity(0.02)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -336,7 +370,7 @@ struct ChildrenManagementSection: View {
         .padding(20)
         .background(Color(.systemBackground))
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -345,44 +379,61 @@ struct ChildRowView: View {
     let child: Child
     let onTap: () -> Void
     
+    @State private var isPressed = false
     private let themeColor = Color(hex: "#a2cee3")
     
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 12) {
-                // Child Avatar (fallback to letter circle; no avatar field in model)
-                Circle()
-                    .fill(themeColor.opacity(0.2))
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Text(String(child.name.prefix(1)).uppercased())
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(themeColor)
-                    )
+            HStack(spacing: 14) {
+                // Child Avatar with gradient overlay
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [themeColor.opacity(0.3), themeColor.opacity(0.15)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 56, height: 56)
+                    
+                    Text(String(child.name.prefix(1)).uppercased())
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(themeColor)
+                }
                 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(child.name)
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundColor(.primary)
                     
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         HStack(spacing: 4) {
-                            Image(systemName: "star.fill")
-                                .font(.caption)
-                                .foregroundColor(.yellow)
-                            Text("\(child.points) points")
-                                .font(.caption)
-                                .foregroundColor(.gray)
+                            ZStack {
+                                Circle()
+                                    .fill(Color.yellow.opacity(0.15))
+                                    .frame(width: 20, height: 20)
+                                
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.yellow)
+                            }
+                            Text("\(child.points)")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.primary)
                         }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.yellow.opacity(0.1))
+                        .cornerRadius(12)
                         
                         HStack(spacing: 4) {
                             Image(systemName: "key.fill")
-                                .font(.caption)
-                                .foregroundColor(.gray)
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
                             Text("PIN: \(child.pin)")
-                                .font(.caption)
-                                .foregroundColor(.gray)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
                         }
                     }
                 }
@@ -390,14 +441,35 @@ struct ChildRowView: View {
                 Spacer()
                 
                 Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(themeColor)
             }
-            .padding(12)
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.systemBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(themeColor.opacity(0.2), lineWidth: 1.5)
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+            .scaleEffect(isPressed ? 0.97 : 1.0)
         }
         .buttonStyle(PlainButtonStyle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isPressed = true
+                    }
+                }
+                .onEnded { _ in
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isPressed = false
+                    }
+                }
+        )
     }
 }
 
@@ -488,7 +560,7 @@ struct QuickActionsSection: View {
         .padding(20)
         .background(Color(.systemBackground))
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
         .fullScreenCover(isPresented: $showingVoiceTaskCreation) {
             VoiceTaskCreationView(choreService: choreService, authService: authService)
         }
@@ -515,24 +587,63 @@ struct QuickActionCard: View {
     let color: Color
     let action: () -> Void
     
+    @State private var isPressed = false
+    
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(color)
+            VStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.15))
+                        .frame(width: 50, height: 50)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(color)
+                }
                 
                 Text(title)
-                    .font(.caption)
-                    .fontWeight(.medium)
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .padding(.vertical, 20)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.systemBackground))
+                    
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [color.opacity(0.08), color.opacity(0.02)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(color.opacity(0.2), lineWidth: 1)
+                }
+            )
+            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+            .scaleEffect(isPressed ? 0.96 : 1.0)
         }
         .buttonStyle(PlainButtonStyle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isPressed = true
+                    }
+                }
+                .onEnded { _ in
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isPressed = false
+                    }
+                }
+        )
     }
 }
 
@@ -1494,21 +1605,22 @@ struct TabButton: View {
             VStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(isSelected ? themeColor : (Color.primary.opacity(0.7)))
+                    .foregroundColor(isSelected ? .white : (Color.primary.opacity(0.7)))
                     .scaleEffect(isSelected ? 1.1 : 1.0)
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isSelected)
                 
                 Text(title)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(isSelected ? themeColor : (Color.primary.opacity(0.8)))
+                    .font(.system(size: 13, weight: isSelected ? .bold : .semibold))
+                    .foregroundColor(isSelected ? .white : (Color.primary.opacity(0.7)))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? themeColor.opacity(0.15) : Color.clear)
+                Capsule()
+                    .fill(isSelected ? themeColor : Color.clear)
+                    .shadow(color: isSelected ? themeColor.opacity(0.4) : Color.clear, radius: 8, x: 0, y: 4)
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isSelected)
             )
         }
