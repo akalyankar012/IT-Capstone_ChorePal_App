@@ -432,6 +432,7 @@ struct QuickActionsSection: View {
     @State private var showingChoreManagement = false
     @State private var showingRewardManagement = false
     @State private var showingStatistics = false
+    @State private var showingVoiceTaskCreation = false
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -451,6 +452,14 @@ struct QuickActionsSection: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 12) {
+                QuickActionCard(
+                    title: "Voice Task",
+                    icon: "mic.fill",
+                    color: themeColor
+                ) {
+                    showingVoiceTaskCreation = true
+                }
+                
                 QuickActionCard(
                     title: "Manage Chores",
                     icon: "list.bullet",
@@ -480,6 +489,9 @@ struct QuickActionsSection: View {
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .fullScreenCover(isPresented: $showingVoiceTaskCreation) {
+            VoiceTaskCreationView(choreService: choreService, authService: authService)
+        }
         .sheet(isPresented: $showingChoreManagement) {
             ChoreManagementView(choreService: choreService, authService: authService)
         }
