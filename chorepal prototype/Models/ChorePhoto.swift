@@ -79,8 +79,8 @@ struct ChorePhoto: Identifiable, Codable {
     var feedback: String?
     var processedAt: Date?
     
-    init(choreId: UUID, childId: UUID, imageData: Data, uploadedAt: Date = Date(), approvalStatus: ApprovalStatus = .pending, approvedByParentId: UUID? = nil, feedback: String? = nil, processedAt: Date? = nil) {
-        self.id = UUID()
+    init(id: UUID = UUID(), choreId: UUID, childId: UUID, imageData: Data, uploadedAt: Date = Date(), approvalStatus: ApprovalStatus = .pending, approvedByParentId: UUID? = nil, feedback: String? = nil, processedAt: Date? = nil) {
+        self.id = id
         self.choreId = choreId
         self.childId = childId
         self.imageData = imageData

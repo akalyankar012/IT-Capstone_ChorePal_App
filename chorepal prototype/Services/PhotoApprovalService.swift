@@ -65,7 +65,11 @@ final class PhotoApprovalService: ObservableObject {
                 let feedback = data["feedback"] as? String
                 let processedAt = (data["processedAt"] as? Timestamp)?.dateValue()
                 
+                // Use the Firestore document ID as the photo ID
+                let photoId = UUID(uuidString: doc.documentID) ?? UUID()
+                
                 let photo = ChorePhoto(
+                    id: photoId,
                     choreId: choreId,
                     childId: childId,
                     imageData: imageData,
@@ -182,7 +186,11 @@ final class PhotoApprovalService: ObservableObject {
             let feedback = data["feedback"] as? String
             let processedAt = (data["processedAt"] as? Timestamp)?.dateValue()
             
+            // Use the Firestore document ID as the photo ID
+            let photoId = UUID(uuidString: doc.documentID) ?? UUID()
+            
             return ChorePhoto(
+                id: photoId,
                 choreId: choreId,
                 childId: childId,
                 imageData: imageData,
