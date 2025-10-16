@@ -221,13 +221,26 @@ struct ChildChoresLiteView: View {
             }
         }
         .fullScreenCover(isPresented: $showPhotoCapture) {
-            if let chore = selectedChoreForPhoto, let childId = authService.currentChild?.id {
-                PhotoCaptureFlow(
-                    chore: chore,
-                    childId: childId,
-                    photoApprovalService: photoApprovalService
-                )
+            Group {
+                if let chore = selectedChoreForPhoto, let childId = authService.currentChild?.id {
+                    PhotoCaptureFlow(
+                        chore: chore,
+                        childId: childId,
+                        photoApprovalService: photoApprovalService
+                    )
+                    .onAppear {
+                        print("🚀 DEBUG: PhotoCaptureFlow appeared")
+                    }
+                } else {
+                    Text("Error loading photo capture")
+                        .onAppear {
+                            print("❌ DEBUG: fullScreenCover missing data")
+                        }
+                }
             }
+        }
+        .onChange(of: showPhotoCapture) { newValue in
+            print("📱 DEBUG: showPhotoCapture changed to: \(newValue)")
         }
     }
 
@@ -244,8 +257,11 @@ struct ChildChoresLiteView: View {
         case .notSubmitted:
             // Show "Upload Photo" button
             Button(action: {
+                print("🎯 DEBUG: Upload Photo button tapped")
+                print("🎯 DEBUG: Chore: \(chore.title)")
                 selectedChoreForPhoto = chore
                 showPhotoCapture = true
+                print("🎯 DEBUG: showPhotoCapture set to true")
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: "photo.badge.arrow.down")
