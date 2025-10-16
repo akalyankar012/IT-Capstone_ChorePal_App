@@ -242,15 +242,15 @@ struct ChildChoresLiteView: View {
         
         switch status {
         case .notSubmitted:
-            // Show "Take Photo" button
+            // Show "Upload Photo" button
             Button(action: {
                 selectedChoreForPhoto = chore
                 showPhotoCapture = true
             }) {
                 HStack(spacing: 6) {
-                    Image(systemName: "camera.fill")
+                    Image(systemName: "photo.badge.arrow.down")
                         .font(.system(size: 14))
-                    Text("Take Photo")
+                    Text("Upload Photo")
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundColor(.white)
