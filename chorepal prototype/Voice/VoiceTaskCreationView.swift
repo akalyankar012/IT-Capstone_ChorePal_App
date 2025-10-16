@@ -60,11 +60,6 @@ struct VoiceTaskCreationView: View {
                         Spacer()
                         
                         HStack(spacing: 8) {
-                            // Updated code indicator
-                            Text("✨")
-                                .font(.system(size: 14))
-                                .opacity(0.8)
-                            
                             Image(systemName: "mic.fill")
                                 .font(.system(size: 18, weight: .semibold))
                                 .foregroundColor(accentColor)
@@ -153,14 +148,21 @@ struct VoiceTaskCreationView: View {
                                     }
                                     
                                     VStack(spacing: 12) {
-                                        Text("Speak your chore assignment")
-                                            .font(.system(size: 24, weight: .bold))
+                                        Text("Create a Task with Your Voice")
+                                            .font(.system(size: 22, weight: .bold))
                                             .foregroundColor(.primary)
                                             .multilineTextAlignment(.center)
                                         
-                                        Text("Example: \"Make dishes for Emma tomorrow worth 20 points\"")
-                                            .font(.system(size: 16, weight: .medium))
+                                        Text("Say the child's name, task, due date/time, and points")
+                                            .font(.system(size: 15, weight: .medium))
                                             .foregroundColor(.secondary)
+                                            .multilineTextAlignment(.center)
+                                            .padding(.horizontal, 20)
+                                        
+                                        Text("Example: \"Make Emma wash dishes tomorrow at 5pm for 20 points\"")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.secondary.opacity(0.8))
+                                            .italic()
                                             .multilineTextAlignment(.center)
                                             .padding(.horizontal, 20)
                                             .opacity(shimmerAnimation ? 0.7 : 1.0)
@@ -906,7 +908,7 @@ struct VoiceTaskCreationView: View {
             
             await MainActor.run {
                 // Add success message (clean confirmation)
-                let successMessage = ChatMessage(text: "✅ \(taskFields.title) for \(child.name), due \(formatDate(dueDate)), worth \(taskFields.points) points", isUser: false)
+                let successMessage = ChatMessage(text: "Task created: \(taskFields.title) for \(child.name), due \(formatDate(dueDate)), worth \(taskFields.points) points", isUser: false)
                 chatMessages.append(successMessage)
                 
                 // Speak confirmation
@@ -1077,7 +1079,7 @@ struct RecordingIndicatorView: View {
                             )
                     }
                     
-                    Text("🎤 Recording...")
+                    Text("Recording...")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.red)
                         .opacity(waveAnimation ? 0.8 : 1.0)
@@ -1156,7 +1158,7 @@ struct ProcessingIndicatorView: View {
                             )
                     }
                     
-                    Text("🔄 Processing...")
+                    Text("Processing...")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(accentColor)
                         .opacity(shimmerAnimation ? 0.8 : 1.0)
