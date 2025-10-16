@@ -420,7 +420,9 @@ struct VoiceTaskCreationView: View {
                                 .foregroundColor(.secondary)
                                 .opacity(0.7)
                         }
-                        .padding(.vertical, 20)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 24)
                         .background(
                             RoundedRectangle(cornerRadius: 20)
                                 .fill(Color.red.opacity(0.05))
@@ -468,7 +470,9 @@ struct VoiceTaskCreationView: View {
                                 .foregroundColor(.secondary)
                                 .opacity(0.7)
                         }
-                        .padding(.vertical, 20)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 24)
                         .background(
                             RoundedRectangle(cornerRadius: 20)
                                 .fill(accentColor.opacity(0.05))
@@ -637,7 +641,7 @@ struct VoiceTaskCreationView: View {
         currentQuestion = ""
         
         // Add user message placeholder
-        let userMessage = ChatMessage(text: "🎤 Recording...", isUser: true, isProcessing: true)
+        let userMessage = ChatMessage(text: "Recording...", isUser: true, isProcessing: true)
         chatMessages.append(userMessage)
         
         wavRecorder.startRecording()
