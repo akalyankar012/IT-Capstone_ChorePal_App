@@ -416,7 +416,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "chorepal-prototype-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "ChorePal needs camera access to take photos of completed tasks for parent approval.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs microphone access to create voice tasks";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "ChorePal needs permission to save photos to your library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ChorePal needs photo library access to save and upload task completion photos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -449,7 +452,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "chorepal-prototype-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "ChorePal needs camera access to take photos of completed tasks for parent approval.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs microphone access to create voice tasks";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "ChorePal needs permission to save photos to your library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ChorePal needs photo library access to save and upload task completion photos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
