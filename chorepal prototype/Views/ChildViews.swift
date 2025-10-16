@@ -7,6 +7,7 @@ struct ChildDashboardView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var choreService: ChoreService
     @ObservedObject var rewardService: RewardService
+    @StateObject private var notificationService = NotificationService()
     @Binding var selectedRole: UserRole
     @AppStorage("selectedTheme") private var selectedTheme: AppTheme = .light
     @State private var selectedTab = 0
@@ -51,11 +52,11 @@ struct ChildDashboardView: View {
                     .padding(.top, 10)
                     .padding(.bottom, 12)
 
-                    // Tabs (Tasks, Rewards, Achievements, Calendar, Settings)
+                    // Tabs (Tasks, Rewards, Notifications, Calendar, Settings)
                     HStack(spacing: 4) {
                         childTabButton("Tasks", icon: "list.bullet", id: 0)
                         childTabButton("Rewards", icon: "gift", id: 1)
-                        childTabButton("Stats", icon: "chart.bar", id: 2)
+                        childTabButtonWithBadge("Alerts", icon: "bell.fill", id: 2, badgeCount: notificationService.unreadCount)
                         childTabButton("Calendar", icon: "calendar", id: 3)
                         childTabButton("Settings", icon: "gearshape", id: 4)
                     }
@@ -70,7 +71,11 @@ struct ChildDashboardView: View {
                         case 1:
                             ChildRewardsLiteView(rewardService: rewardService, authService: authService)
                         case 2:
-                            AchievementsView(achievementManager: AchievementManager())
+                            if let childId = authService.currentChild?.id {
+                                ChildNotificationsView(notificationService: notificationService, childId: childId)
+                            } else {
+                                Text("No child logged in")
+                            }
                         case 3:
                             CalendarView(role: .child, chores: .constant(Chore.sampleChores), achievementManager: AchievementManager())
                         case 4:
@@ -106,6 +111,40 @@ struct ChildDashboardView: View {
         }
         .buttonStyle(.plain)
     }
+    
+    private func childTabButtonWithBadge(_ title: String, icon: String, id: Int, badgeCount: Int) -> some View {
+        Button(action: { withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { selectedTab = id } }) {
+            VStack(spacing: 4) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.6)))
+                    
+                    if badgeCount > 0 {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 16, height: 16)
+                            .overlay(
+                                Text("\(badgeCount)")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.white)
+                            )
+                            .offset(x: 8, y: -8)
+                    }
+                }
+                Text(title)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.6)))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 4)
+            .background(RoundedRectangle(cornerRadius: 10).fill(selectedTab == id ? themeColor.opacity(0.15) : Color.clear))
+        }
+        .buttonStyle(.plain)
+    }
 }
 
 // MARK: - Lite child views (no camera/notifications)
@@ -113,10 +152,13 @@ struct ChildDashboardView: View {
 struct ChildChoresLiteView: View {
     @ObservedObject var choreService: ChoreService
     @ObservedObject var authService: AuthService
+    @StateObject private var photoApprovalService = PhotoApprovalService()
     @AppStorage("selectedTheme") private var selectedTheme: AppTheme = .light
     @State private var showCelebration = false
     @State private var showSuccessBanner = false
     @State private var completedChorePoints = 0
+    @State private var selectedChoreForPhoto: Chore?
+    @State private var showPhotoCapture = false
     private let themeColor = Color(hex: "#a2cee3")
 
     var body: some View {
@@ -145,20 +187,9 @@ struct ChildChoresLiteView: View {
                                 }
                             }
                             Spacer()
-                            Button(action: {
-                                let wasCompleted = chore.isCompleted
-                                choreService.toggleChoreCompletion(chore)
-                                
-                                // Trigger celebration when completing (not uncompleting)
-                                if !wasCompleted {
-                                    completedChorePoints = chore.points
-                                    showCelebration = true
-                                    showSuccessBanner = true
-                                }
-                            }) {
-                                Image(systemName: chore.isCompleted ? "checkmark.circle.fill" : "circle")
-                                    .font(.title3).foregroundColor(chore.isCompleted ? .green : themeColor)
-                            }
+                            
+                            // Show photo proof status button
+                            choreActionButton(for: chore)
                         }
                         .padding(12)
                         .background(Color(.systemBackground).opacity(selectedTheme == .light ? 0.9 : 0.2))
@@ -189,11 +220,93 @@ struct ChildChoresLiteView: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $showPhotoCapture) {
+            if let chore = selectedChoreForPhoto, let childId = authService.currentChild?.id {
+                PhotoCaptureFlow(
+                    chore: chore,
+                    childId: childId,
+                    photoApprovalService: photoApprovalService
+                )
+            }
+        }
     }
 
     private var childChores: [Chore] {
         guard let child = authService.currentChild else { return [] }
         return choreService.getChoresForChild(child.id)
+    }
+    
+    @ViewBuilder
+    private func choreActionButton(for chore: Chore) -> some View {
+        let status = chore.photoProofStatus ?? .notSubmitted
+        
+        switch status {
+        case .notSubmitted:
+            // Show "Take Photo" button
+            Button(action: {
+                selectedChoreForPhoto = chore
+                showPhotoCapture = true
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 14))
+                    Text("Take Photo")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(themeColor)
+                .cornerRadius(20)
+            }
+            
+        case .pending:
+            // Show pending status
+            HStack(spacing: 6) {
+                Image(systemName: "hourglass")
+                    .font(.system(size: 14))
+                Text("Pending")
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.orange)
+            .cornerRadius(20)
+            
+        case .approved:
+            // Show approved status
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 14))
+                Text("Approved")
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.green)
+            .cornerRadius(20)
+            
+        case .rejected:
+            // Show rejected status with option to retake
+            Button(action: {
+                selectedChoreForPhoto = chore
+                showPhotoCapture = true
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "xmark.seal.fill")
+                        .font(.system(size: 14))
+                    Text("Retake")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.red)
+                .cornerRadius(20)
+            }
+        }
     }
 }
 
