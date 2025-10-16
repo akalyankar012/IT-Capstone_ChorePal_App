@@ -1,109 +1,74 @@
 import SwiftUI
 
-// MARK: - Child Notifications View
 struct ChildNotificationsView: View {
-    @ObservedObject var notificationService: NotificationService
     let childId: UUID
-    @State private var showUnreadOnly = false
+    @StateObject private var notificationService = NotificationService()
+    @State private var showDeleteAlert = false
+    @State private var notificationToDelete: AppNotification?
     
     private let themeColor = Color(hex: "#a2cee3")
     
-    var filteredNotifications: [AppNotification] {
-        if showUnreadOnly {
-            return notificationService.notifications.filter { !$0.isRead }
-        }
-        return notificationService.notifications
-    }
-    
     var body: some View {
-        NavigationView {
-            ZStack {
-                LinearGradient(
-                    colors: [themeColor.opacity(0.15), Color(.systemGroupedBackground)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                
-                if notificationService.isLoading {
-                    ProgressView("Loading notifications...")
-                } else if notificationService.notifications.isEmpty {
-                    EmptyNotificationsView()
-                } else {
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            // Filter toggle
-                            HStack {
-                                Button(action: { showUnreadOnly = false }) {
-                                    Text("All")
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(showUnreadOnly ? .secondary : .white)
-                                        .padding(.horizontal, 20)
-                                        .padding(.vertical, 8)
-                                        .background(showUnreadOnly ? Color.clear : themeColor)
-                                        .cornerRadius(20)
-                                }
-                                
-                                Button(action: { showUnreadOnly = true }) {
-                                    HStack(spacing: 4) {
-                                        Text("Unread")
-                                        if notificationService.unreadCount > 0 {
-                                            Text("(\(notificationService.unreadCount))")
-                                        }
-                                    }
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(showUnreadOnly ? .white : .secondary)
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 8)
-                                    .background(showUnreadOnly ? themeColor : Color.clear)
-                                    .cornerRadius(20)
-                                }
-                                
-                                Spacer()
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.top, 20)
-                            
-                            // Notifications list
-                            LazyVStack(spacing: 12) {
-                                ForEach(filteredNotifications) { notification in
-                                    NotificationCard(
-                                        notification: notification,
-                                        notificationService: notificationService
-                                    )
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 100)
-                        }
-                    }
-                    .refreshable {
-                        await notificationService.getNotificationsForUser(userId: childId)
-                    }
+        ZStack {
+            if notificationService.isLoading {
+                ProgressView("Loading notifications...")
+                    .padding()
+            } else if notificationService.notifications.isEmpty {
+                // Empty state
+                VStack(spacing: 16) {
+                    Image(systemName: "bell.slash.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.gray.opacity(0.5))
+                    
+                    Text("No Notifications")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    
+                    Text("You're all caught up!")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
-            }
-            .navigationTitle("Notifications")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if notificationService.unreadCount > 0 {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {
-                            Task {
-                                await notificationService.markAllAsRead(userId: childId)
-                            }
-                        }) {
-                            Text("Mark All Read")
-                                .font(.subheadline)
-                                .foregroundColor(themeColor)
+                .padding()
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(notificationService.notifications) { notification in
+                            NotificationCard(
+                                notification: notification,
+                                onTap: {
+                                    Task {
+                                        await notificationService.markAsRead(notificationId: notification.id)
+                                    }
+                                },
+                                onDelete: {
+                                    notificationToDelete = notification
+                                    showDeleteAlert = true
+                                }
+                            )
                         }
                     }
+                    .padding()
                 }
             }
         }
         .onAppear {
             notificationService.startListening(for: childId)
+        }
+        .onDisappear {
+            notificationService.stopListening()
+        }
+        .alert("Delete Notification", isPresented: $showDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                if let notification = notificationToDelete {
+                    Task {
+                        await notificationService.deleteNotification(notificationId: notification.id)
+                    }
+                }
+            }
+        } message: {
+            Text("Are you sure you want to delete this notification?")
         }
     }
 }
@@ -111,33 +76,30 @@ struct ChildNotificationsView: View {
 // MARK: - Notification Card
 struct NotificationCard: View {
     let notification: AppNotification
-    @ObservedObject var notificationService: NotificationService
+    let onTap: () -> Void
+    let onDelete: () -> Void
     
     var body: some View {
-        Button(action: {
-            if !notification.isRead {
-                Task {
-                    await notificationService.markAsRead(notificationId: notification.id)
-                }
-            }
-        }) {
-            HStack(spacing: 14) {
+        Button(action: onTap) {
+            HStack(alignment: .top, spacing: 12) {
                 // Icon
-                ZStack {
-                    Circle()
-                        .fill(notification.type.color.opacity(0.15))
-                        .frame(width: 48, height: 48)
-                    
-                    Image(systemName: notification.type.icon)
-                        .font(.system(size: 20))
-                        .foregroundColor(notification.type.color)
-                }
+                Circle()
+                    .fill(notification.type.color.opacity(0.2))
+                    .frame(width: 44, height: 44)
+                    .overlay(
+                        Image(systemName: notification.type.icon)
+                            .font(.system(size: 18))
+                            .foregroundColor(notification.type.color)
+                    )
                 
+                // Content
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text(notification.title)
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.primary)
+                        
+                        Spacer()
                         
                         if !notification.isRead {
                             Circle()
@@ -149,51 +111,47 @@ struct NotificationCard: View {
                     Text(notification.message)
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
-                        .lineLimit(2)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
                     
-                    Text(notification.timestamp, style: .relative)
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary.opacity(0.7))
+                    Text(timeAgo(from: notification.timestamp))
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
-                
-                Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(14)
+            .padding(12)
             .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(notification.isRead ? Color(.systemBackground) : Color(.systemBackground).opacity(0.95))
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(notification.isRead ? Color(.systemGray6).opacity(0.5) : Color(.systemGray6))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .strokeBorder(notification.isRead ? Color.clear : notification.type.color.opacity(0.3), lineWidth: 2)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(notification.isRead ? Color.clear : Color.blue.opacity(0.3), lineWidth: 1)
                     )
             )
-            .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
-}
-
-// MARK: - Empty Notifications View
-struct EmptyNotificationsView: View {
-    private let themeColor = Color(hex: "#a2cee3")
     
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "bell.slash.fill")
-                .font(.system(size: 60))
-                .foregroundColor(themeColor.opacity(0.4))
-            
-            Text("No Notifications Yet")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
-            
-            Text("You'll see updates about your tasks,\npoints, and rewards here.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+    private func timeAgo(from date: Date) -> String {
+        let seconds = Int(Date().timeIntervalSince(date))
+        
+        if seconds < 60 {
+            return "Just now"
+        } else if seconds < 3600 {
+            let minutes = seconds / 60
+            return "\(minutes)m ago"
+        } else if seconds < 86400 {
+            let hours = seconds / 3600
+            return "\(hours)h ago"
+        } else {
+            let days = seconds / 86400
+            return "\(days)d ago"
         }
-        .padding(40)
     }
 }
-

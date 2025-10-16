@@ -247,7 +247,20 @@ struct PhotoCaptureFlow: View {
                     updatedChore.photoProofStatus = .pending
                     choreService.updateChore(updatedChore)
                     
-                    // TODO: Send in-app notification to parent
+                    // Send notification to parent
+                    if let parentId = authService.currentParent?.id,
+                       let childName = authService.currentChild?.name {
+                        Task {
+                            let notificationService = NotificationService()
+                            await notificationService.createNotification(
+                                userId: parentId,
+                                type: .photoSubmitted,
+                                title: "Photo Submitted for Review",
+                                message: "\(childName) submitted a photo for \"\(chore.title)\"",
+                                choreId: chore.id
+                            )
+                        }
+                    }
                     
                     uploadSuccess = true
                 } else {

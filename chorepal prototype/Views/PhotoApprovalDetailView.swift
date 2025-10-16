@@ -240,7 +240,17 @@ struct PhotoApprovalDetailView: View {
                         
                         print("✅ Awarded \(chore.points) points to child \(photo.childId)")
                         
-                        // TODO: Send in-app notification to child
+                        // Send notification to child
+                        Task {
+                            let notificationService = NotificationService()
+                            await notificationService.createNotification(
+                                userId: photo.childId,
+                                type: .photoApproved,
+                                title: "Photo Approved! 🎉",
+                                message: "Great job! You earned \(chore.points) points for \"\(chore.title)\"",
+                                choreId: chore.id
+                            )
+                        }
                     }
                     
                     onDismiss()
@@ -285,9 +295,19 @@ struct PhotoApprovalDetailView: View {
                         updatedChore.photoProofStatus = .rejected
                         updatedChore.parentFeedback = trimmedFeedback
                         choreService.updateChore(updatedChore)
+                        
+                        // Send notification to child
+                        Task {
+                            let notificationService = NotificationService()
+                            await notificationService.createNotification(
+                                userId: photo.childId,
+                                type: .photoRejected,
+                                title: "Photo Needs Retake",
+                                message: "Please retake the photo for \"\(chore.title)\". Feedback: \(trimmedFeedback)",
+                                choreId: chore.id
+                            )
+                        }
                     }
-                    
-                    // TODO: Send in-app notification to child
                     
                     onDismiss()
                 } else {

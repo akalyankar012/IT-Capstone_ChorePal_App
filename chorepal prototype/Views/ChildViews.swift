@@ -74,7 +74,7 @@ struct ChildDashboardView: View {
                             ChildRewardsLiteView(rewardService: rewardService, authService: authService)
                         case 2:
                             if let childId = authService.currentChild?.id {
-                                ChildNotificationsView(notificationService: notificationService, childId: childId)
+                                ChildNotificationsView(childId: childId)
                             } else {
                                 Text("No child logged in")
                             }
