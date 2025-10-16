@@ -244,8 +244,9 @@ struct ChildChoresLiteView: View {
         case .notSubmitted:
             // Show "Upload Photo" button
             Button(action: {
+                // Set chore first, then present sheet on next run loop
                 selectedChoreForPhoto = chore
-                DispatchQueue.main.async {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
                     showPhotoCapture = true
                 }
             }) {
@@ -293,8 +294,9 @@ struct ChildChoresLiteView: View {
         case .rejected:
             // Show rejected status with option to retake
             Button(action: {
+                // Set chore first, then present sheet on next run loop
                 selectedChoreForPhoto = chore
-                DispatchQueue.main.async {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
                     showPhotoCapture = true
                 }
             }) {
