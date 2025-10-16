@@ -30,6 +30,13 @@ struct PhotoCaptureFlow: View {
                     VStack(spacing: 32) {
                         Spacer()
                         
+                        // DEBUG: Make sure view is visible
+                        Text("🎯 PhotoCaptureFlow Loaded")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding()
+                            .background(Color.yellow)
+                        
                         ZStack {
                             Circle()
                                 .fill(themeColor.opacity(0.15))
