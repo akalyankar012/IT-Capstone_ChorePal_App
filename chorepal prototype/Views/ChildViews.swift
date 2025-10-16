@@ -227,6 +227,29 @@ struct ChildChoresLiteView: View {
                     childId: childId,
                     photoApprovalService: photoApprovalService
                 )
+            } else {
+                VStack(spacing: 20) {
+                    Text("⚠️ ERROR")
+                        .font(.title)
+                        .foregroundColor(.red)
+                    
+                    if selectedChoreForPhoto == nil {
+                        Text("selectedChoreForPhoto is nil")
+                    }
+                    if authService.currentChild?.id == nil {
+                        Text("currentChild.id is nil")
+                    }
+                    
+                    Button("Close") {
+                        showPhotoCapture = false
+                    }
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.white)
             }
         }
     }
