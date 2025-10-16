@@ -227,29 +227,6 @@ struct ChildChoresLiteView: View {
                     childId: childId,
                     photoApprovalService: photoApprovalService
                 )
-            } else {
-                VStack(spacing: 20) {
-                    Text("⚠️ ERROR")
-                        .font(.title)
-                        .foregroundColor(.red)
-                    
-                    if selectedChoreForPhoto == nil {
-                        Text("selectedChoreForPhoto is nil")
-                    }
-                    if authService.currentChild?.id == nil {
-                        Text("currentChild.id is nil")
-                    }
-                    
-                    Button("Close") {
-                        showPhotoCapture = false
-                    }
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.white)
             }
         }
     }
@@ -268,7 +245,9 @@ struct ChildChoresLiteView: View {
             // Show "Upload Photo" button
             Button(action: {
                 selectedChoreForPhoto = chore
-                showPhotoCapture = true
+                DispatchQueue.main.async {
+                    showPhotoCapture = true
+                }
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: "photo.badge.arrow.down")
@@ -315,7 +294,9 @@ struct ChildChoresLiteView: View {
             // Show rejected status with option to retake
             Button(action: {
                 selectedChoreForPhoto = chore
-                showPhotoCapture = true
+                DispatchQueue.main.async {
+                    showPhotoCapture = true
+                }
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: "xmark.seal.fill")
