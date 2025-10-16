@@ -53,7 +53,7 @@ struct ChildRewardCard: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.caption)
                                 .foregroundColor(.green)
-                            Text("Can afford")
+                            Text("Eligible")
                                 .font(.caption2)
                                 .foregroundColor(.green)
                         }

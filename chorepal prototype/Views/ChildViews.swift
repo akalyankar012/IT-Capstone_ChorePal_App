@@ -110,47 +110,80 @@ struct ChildChoresLiteView: View {
     @ObservedObject var choreService: ChoreService
     @ObservedObject var authService: AuthService
     @AppStorage("selectedTheme") private var selectedTheme: AppTheme = .light
+    @State private var showCelebration = false
+    @State private var showSuccessBanner = false
+    @State private var completedChorePoints = 0
     private let themeColor = Color(hex: "#a2cee3")
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                ForEach(childChores) { chore in
-                    HStack(spacing: 12) {
-                        Circle().fill(themeColor.opacity(0.3)).frame(width: 44, height: 44)
-                            .overlay(Image(systemName: "checkmark.circle").foregroundColor(themeColor))
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(chore.title)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(selectedTheme == .light ? .primary : .white)
-                            Text(chore.description)
-                                .font(.caption)
-                                .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
-                                .lineLimit(2)
-                            HStack(spacing: 10) {
-                                Label("\(chore.points) pts", systemImage: "star.fill")
+        ZStack {
+            ScrollView {
+                VStack(spacing: 12) {
+                    ForEach(childChores) { chore in
+                        HStack(spacing: 12) {
+                            Circle().fill(themeColor.opacity(0.3)).frame(width: 44, height: 44)
+                                .overlay(Image(systemName: "checkmark.circle").foregroundColor(themeColor))
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(chore.title)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(selectedTheme == .light ? .primary : .white)
+                                Text(chore.description)
                                     .font(.caption)
-                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.6))
-                                Label(chore.dueDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
-                                    .font(.caption)
-                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.6))
+                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
+                                    .lineLimit(2)
+                                HStack(spacing: 10) {
+                                    Label("\(chore.points) pts", systemImage: "star.fill")
+                                        .font(.caption)
+                                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.6))
+                                    Label(chore.dueDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
+                                        .font(.caption)
+                                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.6))
+                                }
+                            }
+                            Spacer()
+                            Button(action: {
+                                let wasCompleted = chore.isCompleted
+                                choreService.toggleChoreCompletion(chore)
+                                
+                                // Trigger celebration when completing (not uncompleting)
+                                if !wasCompleted {
+                                    completedChorePoints = chore.points
+                                    showCelebration = true
+                                    showSuccessBanner = true
+                                }
+                            }) {
+                                Image(systemName: chore.isCompleted ? "checkmark.circle.fill" : "circle")
+                                    .font(.title3).foregroundColor(chore.isCompleted ? .green : themeColor)
                             }
                         }
-                        Spacer()
-                        Button(action: { choreService.toggleChoreCompletion(chore) }) {
-                            Image(systemName: chore.isCompleted ? "checkmark.circle.fill" : "circle")
-                                .font(.title3).foregroundColor(chore.isCompleted ? .green : themeColor)
-                        }
+                        .padding(12)
+                        .background(Color(.systemBackground).opacity(selectedTheme == .light ? 0.9 : 0.2))
+                        .cornerRadius(12)
+                        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
                     }
-                    .padding(12)
-                    .background(Color(.systemBackground).opacity(selectedTheme == .light ? 0.9 : 0.2))
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                    Spacer(minLength: 80)
                 }
-                Spacer(minLength: 80)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
+            
+            // Celebration overlay
+            if showCelebration {
+                CelebrationView(isShowing: $showCelebration)
+            }
+            
+            // Success banner
+            if showSuccessBanner {
+                VStack {
+                    SuccessBanner(
+                        isShowing: $showSuccessBanner,
+                        message: "Great Job!",
+                        points: completedChorePoints
+                    )
+                    .padding(.top, 60)
+                    Spacer()
+                }
+            }
         }
     }
 
