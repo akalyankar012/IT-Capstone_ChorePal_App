@@ -226,15 +226,10 @@ struct PhotoApprovalDetailView: View {
                 isProcessing = false
                 
                 if success {
-                    // Award points to child
-                    if let chore = chore,
-                       var parent = authService.currentParent,
-                       let childIndex = parent.children.firstIndex(where: { $0.id == photo.childId }) {
-                        
-                        // Update child points
-                        parent.children[childIndex].points += chore.points
-                        parent.children[childIndex].totalPointsEarned += chore.points
-                        authService.currentParent = parent
+                    // Award points to child and update chore
+                    if let chore = chore {
+                        // Award points (saves to Firestore automatically)
+                        authService.awardPointsToChild(childId: photo.childId, points: chore.points)
                         
                         // Update chore status
                         var updatedChore = chore
@@ -242,6 +237,8 @@ struct PhotoApprovalDetailView: View {
                         updatedChore.photoProofStatus = .approved
                         updatedChore.parentFeedback = feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : feedbackText
                         choreService.updateChore(updatedChore)
+                        
+                        print("✅ Awarded \(chore.points) points to child \(photo.childId)")
                         
                         // TODO: Send in-app notification to child
                     }
