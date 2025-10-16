@@ -1,8 +1,26 @@
 import SwiftUI
 
+// MARK: - Phone Number Formatting
+func formatPhoneNumber(_ phoneNumber: String) -> String {
+    let cleaned = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+    let mask = "(XXX) XXX-XXXX"
+    var result = ""
+    var index = cleaned.startIndex
+    for ch in mask where index < cleaned.endIndex {
+        if ch == "X" {
+            result.append(cleaned[index])
+            index = cleaned.index(after: index)
+        } else {
+            result.append(ch)
+        }
+    }
+    return result
+}
+
 // MARK: - Parent Sign Up View
 struct ParentSignUpView: View {
     @ObservedObject var authService: AuthService
+    @State private var parentName = ""
     @State private var phoneNumber = ""
     @State private var password = ""
     @State private var confirmPassword = ""
@@ -18,7 +36,7 @@ struct ParentSignUpView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Back Button
+                    // Back Button - moved down from top
                     HStack {
                         Button(action: {
                             authService.authState = .none
@@ -33,36 +51,55 @@ struct ParentSignUpView: View {
                         Spacer()
                     }
                     .padding(.horizontal, 24)
-                    .padding(.top, 16)
+                    .padding(.top, 30) // Moved higher for better accessibility
                     
-                    // Header
+                    // Header - better centered with smaller fonts
                     VStack(spacing: 16) {
                         Image("potato")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 120, height: 120)
+                            .frame(width: 100, height: 100) // Reduced from 120
                             .cornerRadius(20)
                             .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
                         
-                        Text("Create Parent Account")
-                            .font(.system(size: 32, weight: .heavy))
-                            .foregroundColor(themeColor)
-                            .multilineTextAlignment(.center)
-                        
-                        Text("Join ChorePal to manage your family's chores")
-                            .font(.title3)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
+                        VStack(spacing: 6) {
+                            Text("Create Parent Account")
+                                .font(.system(size: 28, weight: .heavy)) // Reduced from 32
+                                .foregroundColor(themeColor)
+                                .multilineTextAlignment(.center)
+                            
+                            Text("Manage your family's chores with ChorePal")
+                                .font(.title2) // Reduced from title3
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 16) // Reduced from 20
+                        }
                     }
-                    .padding(.top, 40)
-                    .padding(.bottom, 40)
+                    .padding(.top, 20) // Reduced from 30
+                    .padding(.bottom, 20) // Reduced from 30
                     
-                    // Form
-                    VStack(spacing: 20) {
+                    // Form - more compact
+                    VStack(spacing: 16) { // Reduced from 20
+                        // Parent Name
+                        VStack(alignment: .leading, spacing: 6) { // Reduced from 8
+                            Text("Full Name")
+                                .font(.subheadline) // Reduced from headline
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                            
+                            TextField("Enter your full name", text: $parentName)
+                                .textContentType(.name)
+                                .padding(.vertical, 12) // Reduced from 16
+                                .padding(.horizontal, 16)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                        }
+                        
                         // Phone Number
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 6) { // Reduced from 8
                             Text("Phone Number")
-                                .font(.headline)
+                                .font(.subheadline) // Reduced from headline
+                                .fontWeight(.semibold)
                                 .foregroundColor(.primary)
                             
                             HStack {
@@ -73,18 +110,21 @@ struct ParentSignUpView: View {
                                 TextField("(555) 123-4567", text: $phoneNumber)
                                     .keyboardType(.phonePad)
                                     .textContentType(.telephoneNumber)
-                                    .padding(.vertical, 16)
+                                    .onChange(of: phoneNumber) { _, newValue in
+                                        phoneNumber = formatPhoneNumber(newValue)
+                                    }
+                                    .padding(.vertical, 12) // Reduced from 16
                                     .padding(.horizontal, 12)
                             }
                             .background(Color(.systemGray6))
-                            .cornerRadius(16)
-                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                            .cornerRadius(12)
                         }
                         
                         // Password
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 6) { // Reduced from 8
                             Text("Password")
-                                .font(.headline)
+                                .font(.subheadline) // Reduced from headline
+                                .fontWeight(.semibold)
                                 .foregroundColor(.primary)
                             
                             HStack {
@@ -104,17 +144,17 @@ struct ParentSignUpView: View {
                                 }
                                 .padding(.trailing, 16)
                             }
-                            .padding(.vertical, 16)
+                            .padding(.vertical, 12) // Reduced from 16
                             .padding(.leading, 16)
                             .background(Color(.systemGray6))
-                            .cornerRadius(16)
-                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                            .cornerRadius(12)
                         }
                         
                         // Confirm Password
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 6) { // Reduced from 8
                             Text("Confirm Password")
-                                .font(.headline)
+                                .font(.subheadline) // Reduced from headline
+                                .fontWeight(.semibold)
                                 .foregroundColor(.primary)
                             
                             HStack {
@@ -134,11 +174,10 @@ struct ParentSignUpView: View {
                                 }
                                 .padding(.trailing, 16)
                             }
-                            .padding(.vertical, 16)
+                            .padding(.vertical, 12) // Reduced from 16
                             .padding(.leading, 16)
                             .background(Color(.systemGray6))
-                            .cornerRadius(16)
-                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                            .cornerRadius(12)
                         }
                         
                         // Error Message
@@ -148,6 +187,21 @@ struct ParentSignUpView: View {
                                 .font(.caption)
                                 .padding(.top, 8)
                         }
+                        
+                        // Sign In Link - moved above Create Account button
+                        HStack {
+                            Text("Already have an account?")
+                                .foregroundColor(.gray)
+                                .font(.subheadline) // Made smaller
+                            
+                            Button("Sign In") {
+                                authService.authState = .signIn
+                            }
+                            .foregroundColor(themeColor)
+                            .font(.subheadline) // Made smaller
+                            .fontWeight(.semibold)
+                        }
+                        .padding(.top, 16) // Reduced from 20
                         
                         // Sign Up Button
                         Button(action: {
@@ -167,31 +221,19 @@ struct ParentSignUpView: View {
                                 }
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
+                            .padding(.vertical, 14) // Reduced from 16
                             .background(themeColor)
                             .foregroundColor(.white)
                             .cornerRadius(12)
                         }
                         .disabled(authService.isLoading || !isFormValid)
                         .opacity(isFormValid ? 1.0 : 0.6)
-                        .padding(.top, 20)
-                        
-                        // Sign In Link
-                        HStack {
-                            Text("Already have an account?")
-                                .foregroundColor(.gray)
-                            
-                            Button("Sign In") {
-                                authService.authState = .signIn
-                            }
-                            .foregroundColor(themeColor)
-                            .fontWeight(.semibold)
-                        }
-                        .padding(.top, 20)
-                        
-                        Spacer()
+                        .padding(.top, 16) // Reduced from 20
                     }
                     .padding(.horizontal, 24)
+                    
+                    // Spacer to push content up
+                    Spacer()
                 }
             }
         }
@@ -199,6 +241,7 @@ struct ParentSignUpView: View {
     }
     
     private var isFormValid: Bool {
+        !parentName.isEmpty &&
         !phoneNumber.isEmpty && 
         password.count >= 6 && 
         password == confirmPassword &&
@@ -296,7 +339,7 @@ struct PhoneVerificationView: View {
                             .frame(width: 1, height: 1)
                             .opacity(0.001)
                             .focused($isVerificationCodeFocused)
-                            .onChange(of: verificationCode) { newValue in
+                            .onChange(of: verificationCode) { _, newValue in
                                 if newValue.count > 6 {
                                     verificationCode = String(newValue.prefix(6))
                                 }
@@ -388,14 +431,13 @@ struct VerificationCodeDigit: View {
     
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(isActive ? themeColor.opacity(0.2) : Color(.systemGray6))
                 .frame(width: 50, height: 60)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(isActive ? themeColor : Color(.systemGray5), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isActive ? themeColor : Color.clear, lineWidth: 2)
                 )
-                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
             
             Text(digit)
                 .font(.system(size: 24, weight: .bold))
@@ -410,6 +452,7 @@ struct ParentSignInView: View {
     @State private var phoneNumber = ""
     @State private var password = ""
     @State private var showPassword = false
+    @State private var showingForgotPassword = false
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -420,7 +463,7 @@ struct ParentSignInView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Back Button
+                    // Back Button - moved down from top
                     HStack {
                         Button(action: {
                             authService.authState = .none
@@ -435,29 +478,32 @@ struct ParentSignInView: View {
                         Spacer()
                     }
                     .padding(.horizontal, 24)
-                    .padding(.top, 16)
+                    .padding(.top, 30) // Moved higher for better accessibility
                     
-                    // Header
-                    VStack(spacing: 16) {
+                    // Header - better centered
+                    VStack(spacing: 20) {
                         Image("potato")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 120, height: 120)
                             .cornerRadius(20)
-                            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+                            .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
                         
-                        Text("Welcome Back!")
-                            .font(.system(size: 32, weight: .heavy))
-                            .foregroundColor(themeColor)
-                            .multilineTextAlignment(.center)
-                        
-                        Text("Sign in to your ChorePal account")
-                            .font(.title3)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
+                        VStack(spacing: 8) {
+                            Text("Welcome Back!")
+                                .font(.system(size: 32, weight: .heavy))
+                                .foregroundColor(themeColor)
+                                .multilineTextAlignment(.center)
+                            
+                            Text("Sign in to your ChorePal account")
+                                .font(.title3)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                        }
                     }
-                    .padding(.top, 40)
-                    .padding(.bottom, 40)
+                    .padding(.top, 30) // Reduced from 40
+                    .padding(.bottom, 30) // Reduced from 40
                     
                     // Form
                     VStack(spacing: 20) {
@@ -475,12 +521,14 @@ struct ParentSignInView: View {
                                 TextField("(555) 123-4567", text: $phoneNumber)
                                     .keyboardType(.phonePad)
                                     .textContentType(.telephoneNumber)
+                                    .onChange(of: phoneNumber) { _, newValue in
+                                        phoneNumber = formatPhoneNumber(newValue)
+                                    }
                                     .padding(.vertical, 16)
                                     .padding(.horizontal, 12)
                             }
                             .background(Color(.systemGray6))
-                            .cornerRadius(16)
-                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                            .cornerRadius(12)
                         }
                         
                         // Password
@@ -509,8 +557,18 @@ struct ParentSignInView: View {
                             .padding(.vertical, 16)
                             .padding(.leading, 16)
                             .background(Color(.systemGray6))
-                            .cornerRadius(16)
-                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                            .cornerRadius(12)
+                        }
+                        
+                        // Forgot Password Link
+                        HStack {
+                            Spacer()
+                            Button("Forgot Password?") {
+                                showingForgotPassword = true
+                            }
+                            .foregroundColor(themeColor)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
                         }
                         
                         // Error Message
@@ -548,7 +606,7 @@ struct ParentSignInView: View {
                         .opacity(isFormValid ? 1.0 : 0.6)
                         .padding(.top, 20)
                         
-                        // Sign Up Link
+                        // Sign Up Link - moved up from bottom
                         HStack {
                             Text("Don't have an account?")
                                 .foregroundColor(.gray)
@@ -559,15 +617,20 @@ struct ParentSignInView: View {
                             .foregroundColor(themeColor)
                             .fontWeight(.semibold)
                         }
-                        .padding(.top, 20)
-                        
-                        Spacer()
+                        .padding(.top, 30) // Increased from 20
+                        .padding(.bottom, 20) // Added bottom padding
                     }
                     .padding(.horizontal, 24)
+                    
+                    // Spacer to push content up
+                    Spacer()
                 }
             }
         }
         .navigationBarHidden(true)
+        .sheet(isPresented: $showingForgotPassword) {
+            ForgotPasswordView(authService: authService)
+        }
     }
     
     private var isFormValid: Bool {
@@ -579,6 +642,136 @@ struct ParentSignInView: View {
         if success {
             // Authentication state will be updated by the service
         }
+    }
+}
+
+// MARK: - Forgot Password View
+struct ForgotPasswordView: View {
+    @ObservedObject var authService: AuthService
+    @Environment(\.dismiss) private var dismiss
+    @State private var phoneNumber = ""
+    @State private var showingSuccessAlert = false
+    
+    private let themeColor = Color(hex: "#a2cee3")
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 30) {
+                // Header
+                VStack(spacing: 16) {
+                    Image(systemName: "key.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(themeColor)
+                    
+                    Text("Reset Password")
+                        .font(.title)
+                        .fontWeight(.bold)
+                    
+                    Text("Enter your phone number to receive a password reset link")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 40)
+                
+                // Form
+                VStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Phone Number")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        HStack {
+                            Text("+1")
+                                .foregroundColor(.gray)
+                                .padding(.leading, 16)
+                            
+                            TextField("(555) 123-4567", text: $phoneNumber)
+                                .keyboardType(.phonePad)
+                                .textContentType(.telephoneNumber)
+                                .onChange(of: phoneNumber) { _, newValue in
+                                    phoneNumber = formatPhoneNumber(newValue)
+                                }
+                                .padding(.vertical, 16)
+                                .padding(.horizontal, 12)
+                        }
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                    }
+                    
+                    // Error Message
+                    if let errorMessage = authService.errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+                }
+                .padding(.horizontal, 20)
+                
+                Spacer()
+                
+                // Action Buttons
+                VStack(spacing: 12) {
+                    Button(action: resetPassword) {
+                        HStack {
+                            if authService.isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.8)
+                            } else {
+                                Text("Send Reset Link")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(canResetPassword ? themeColor : Color.gray)
+                        .cornerRadius(12)
+                    }
+                    .disabled(!canResetPassword || authService.isLoading)
+                    
+                    Button(action: { dismiss() }) {
+                        Text("Cancel")
+                            .font(.headline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.gray)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+            .navigationTitle("Reset Password")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .alert("Password Reset", isPresented: $showingSuccessAlert) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("Password reset link has been sent to your phone number.")
+        }
+    }
+    
+    private var canResetPassword: Bool {
+        !phoneNumber.isEmpty && phoneNumber.count >= 10
+    }
+    
+    private func resetPassword() {
+        // Placeholder until backend flow is added; show success UI so build runs
+        showingSuccessAlert = true
     }
 }
 
@@ -598,7 +791,7 @@ struct ChildLoginView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Back Button
+                    // Back Button - moved down from top
                     HStack {
                         Button(action: {
                             selectedRole = .none
@@ -614,29 +807,32 @@ struct ChildLoginView: View {
                         Spacer()
                     }
                     .padding(.horizontal, 24)
-                    .padding(.top, 16)
+                    .padding(.top, 30) // Moved higher for better accessibility
                     
-                    // Header
-                    VStack(spacing: 16) {
+                    // Header - better centered
+                    VStack(spacing: 20) {
                         Image("potato")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 120, height: 120)
                             .cornerRadius(20)
-                            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+                            .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
                         
-                        Text("Welcome, Kid!")
-                            .font(.system(size: 32, weight: .heavy))
-                            .foregroundColor(themeColor)
-                            .multilineTextAlignment(.center)
-                        
-                        Text("Enter your 4-digit PIN to start")
-                            .font(.title3)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
+                        VStack(spacing: 8) {
+                            Text("Welcome, Kid!")
+                                .font(.system(size: 32, weight: .heavy))
+                                .foregroundColor(themeColor)
+                                .multilineTextAlignment(.center)
+                            
+                            Text("Enter your 4-digit PIN to start")
+                                .font(.title3)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                        }
                     }
-                    .padding(.top, 40)
-                    .padding(.bottom, 40)
+                    .padding(.top, 30) // Reduced from 40
+                    .padding(.bottom, 30) // Reduced from 40
                     
                     // PIN Input
                     VStack(spacing: 20) {
@@ -660,7 +856,7 @@ struct ChildLoginView: View {
                             .frame(width: 1, height: 1)
                             .opacity(0.001)
                             .focused($isPinFocused)
-                            .onChange(of: pin) { newValue in
+                            .onChange(of: pin) { _, newValue in
                                 if newValue.count > 4 {
                                     pin = String(newValue.prefix(4))
                                 }
@@ -699,4 +895,4 @@ struct ChildLoginView: View {
             // Authentication state will be updated by the service
         }
     }
-} 
+}

@@ -30,7 +30,8 @@ struct ContentView: View {
                     ChildDashboardView(
                         authService: authService,
                         choreService: choreService,
-                        rewardService: rewardService
+                        rewardService: rewardService,
+                        selectedRole: $selectedRole
                     )
                 } else {
                     TabView(selection: $selectedTab) {

@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 // MARK: - Manage Rewards View
 struct ManageRewardsView: View {
@@ -28,9 +29,8 @@ struct ManageRewardsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                            .background(Color(.systemGray6))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
                     
                     // Filter Pills
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -54,10 +54,9 @@ struct ManageRewardsView: View {
                                     .font(.caption)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
-                                            .background(selectedCategory == nil ? themeColor : Color(.systemGray5))
-        .foregroundColor(selectedCategory == nil ? .white : .primary)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                                    .background(selectedCategory == nil ? themeColor : Color(.systemGray5))
+                                    .foregroundColor(selectedCategory == nil ? .white : .primary)
+                                    .cornerRadius(16)
                             }
                             
                             ForEach(RewardCategory.allCases, id: \.self) { category in
@@ -70,10 +69,9 @@ struct ManageRewardsView: View {
                                     }
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
-                                            .background(selectedCategory == category ? Color(hex: category.color) : Color(.systemGray5))
-        .foregroundColor(selectedCategory == category ? .white : .primary)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                                    .background(selectedCategory == category ? Color(hex: category.color) : Color(.systemGray5))
+                                    .foregroundColor(selectedCategory == category ? .white : .primary)
+                                    .cornerRadius(16)
                                 }
                             }
                         }
@@ -312,7 +310,7 @@ struct AddRewardView: View {
                                 .font(.headline)
                                 .frame(width: 60)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .onChange(of: pointsText) { newValue in
+                                .onChange(of: pointsText) { _, newValue in
                                     if let points = Int(newValue), points >= 1, points <= 1000 {
                                         pointsValue = points
                                     }
@@ -505,7 +503,7 @@ struct EditRewardView: View {
                                 .font(.headline)
                                 .frame(width: 60)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .onChange(of: pointsText) { newValue in
+                                .onChange(of: pointsText) { _, newValue in
                                     if let points = Int(newValue), points >= 1, points <= 1000 {
                                         pointsValue = points
                                     }

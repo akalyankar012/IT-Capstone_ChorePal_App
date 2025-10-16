@@ -32,3 +32,21 @@ enum ActivityType {
         }
     }
 } 
+
+// UI compatibility
+typealias AppTheme = Theme
+extension Theme { var icon: String { systemName } }
+
+// Child avatar enum used by updated UI
+enum ChildAvatar: String, CaseIterable, Codable {
+    case boy
+    case girl
+    
+    var displayName: String {
+        switch self { case .boy: return "Boy"; case .girl: return "Girl" }
+    }
+    
+    var fallbackIcon: String {
+        switch self { case .boy: return "person.fill"; case .girl: return "person.fill" }
+    }
+}

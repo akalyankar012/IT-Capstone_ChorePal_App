@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 import Charts
 
 // MARK: - Statistics View
@@ -139,7 +140,7 @@ struct FamilyOverviewStats: View {
                 
                 StatisticsCard(
                     title: "Total Points Earned",
-                    value: "\(authService.currentParent?.children.reduce(0) { $0 + $1.totalPointsEarned } ?? 0)",
+                    value: "\(choreService.getCompletedPoints())",
                     icon: "star.fill",
                     color: .yellow,
                     trend: .up
@@ -211,16 +212,6 @@ struct StatisticsCard: View {
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemGray6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color(.systemGray5), lineWidth: 0.5)
-                            )
-                    )
                 
                 Text(title)
                     .font(.caption)
@@ -236,7 +227,7 @@ struct StatisticsCard: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         )
     }
 }
@@ -384,15 +375,12 @@ struct ChartBar: View {
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
                     .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color(.systemGray6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color(.systemGray5), lineWidth: 0.5)
-                            )
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                            .background(Color(.systemBackground))
                     )
             }
         }

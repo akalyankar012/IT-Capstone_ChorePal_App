@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 // MARK: - Chore Management View
 struct ChoreManagementView: View {
@@ -68,8 +69,15 @@ struct ChoreManagementView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") {
+                    Button(action: {
                         dismiss()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .medium))
+                            Text("Back")
+                                .font(.system(size: 16, weight: .medium))
+                        }
                     }
                     .foregroundColor(themeColor)
                 }
@@ -82,10 +90,10 @@ struct ChoreManagementView: View {
                 }
             }
         }
-        .fullScreenCover(isPresented: $showingAddChore) {
+        .sheet(isPresented: $showingAddChore) {
             AddChoreView(choreService: choreService, authService: authService)
         }
-        .fullScreenCover(item: $selectedChore) { chore in
+        .sheet(item: $selectedChore) { chore in
             EditChoreView(chore: chore, choreService: choreService, authService: authService)
         }
     }
@@ -182,9 +190,8 @@ struct ChoreManagementRowView: View {
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                                .background(Color(.systemGray6))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
                     }
                     
                     // Description
@@ -285,8 +292,8 @@ struct ChoreManagementRowView: View {
         }
         .padding(16)
         .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
         .sheet(isPresented: $showingAssignmentSheet) {
             ChoreAssignmentView(chore: chore, choreService: choreService, authService: authService)
         }

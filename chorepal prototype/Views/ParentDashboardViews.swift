@@ -1,101 +1,193 @@
 import SwiftUI
+import Foundation
+import UIKit
+
+// MARK: - Avatar View Component
+struct AvatarView: View {
+    let avatarName: String
+    let size: CGFloat
+    let themeColor: Color
+    
+    init(avatarName: String, size: CGFloat = 50, themeColor: Color = Color(hex: "#a2cee3")) {
+        self.avatarName = avatarName
+        self.size = size
+        self.themeColor = themeColor
+    }
+    
+    var body: some View {
+        Group {
+            if let avatar = ChildAvatar(rawValue: avatarName) {
+                // Try to load the image first - use the correct imageset names
+                let imageName = avatar == .boy ? "boy_avatar" : "girl_avatar_1"
+                
+                if UIImage(named: imageName) != nil {
+                    Image(imageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: size, height: size)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(themeColor, lineWidth: 2)
+                        )
+                } else {
+                    // Fallback to system icon
+                    Image(systemName: avatar.fallbackIcon)
+                        .font(.system(size: size * 0.6))
+                        .foregroundColor(themeColor)
+                        .frame(width: size, height: size)
+                        .background(
+                            Circle()
+                                .fill(themeColor.opacity(0.2))
+                        )
+                }
+            } else {
+                // Default fallback
+                Image(systemName: "person.circle.fill")
+                    .font(.system(size: size * 0.6))
+                    .foregroundColor(themeColor)
+                    .frame(width: size, height: size)
+                    .background(
+                        Circle()
+                            .fill(themeColor.opacity(0.2))
+                    )
+            }
+        }
+    }
+}
 
 // MARK: - Parent Dashboard View
 struct ParentDashboardView: View {
     @ObservedObject var authService: AuthService
     @StateObject private var choreService = ChoreService()
     @StateObject private var rewardService = RewardService()
+    @StateObject private var localizationService = LocalizationService()
+    @StateObject private var photoApprovalService = PhotoApprovalService()
     @State private var showingAddChild = false
     @State private var selectedChild: Child?
     @State private var showingChildDetails = false
+    @State private var showingPhotoApprovals = false
     @State private var selectedTab = 0
-    @AppStorage("selectedTheme") private var selectedTheme: Theme = .light
+    @AppStorage("selectedTheme") private var selectedTheme: AppTheme = .light
     @State private var isAnimating = false
     
     private let themeColor = Color(hex: "#a2cee3")
     
     var body: some View {
         NavigationView {
-            ZStack {
-                Color(.systemGroupedBackground)
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // Offline Status Indicator
-                    if choreService.isOffline {
-                        HStack {
-                            Image(systemName: "wifi.slash")
-                                .foregroundColor(.orange)
-                            Text("Working Offline")
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                            Spacer()
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 16) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Welcome back, \(authService.currentParent?.phoneNumber ?? "Parent")!")
+                                .font(.title2)
+                                .foregroundColor(.gray)
+                            
+                            Text("Family Dashboard")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(themeColor)
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                        .background(Color.orange.opacity(0.1))
-                    }
-                    
-                    // Header
-                    ParentDashboardHeader(
-                        authService: authService,
-                        showingAddChild: $showingAddChild
-                    )
-                    
-                    // Tab Selector
-                    HStack(spacing: 0) {
-                        TabButton(
-                            title: "Overview",
-                            icon: "house",
-                            isSelected: selectedTab == 0,
-                            action: { selectedTab = 0 }
-                        )
                         
-                        TabButton(
-                            title: "Calendar",
-                            icon: "calendar",
-                            isSelected: selectedTab == 1,
-                            action: { selectedTab = 1 }
-                        )
+                        Spacer()
                         
-                        TabButton(
-                            title: "Settings",
-                            icon: "gearshape",
-                            isSelected: selectedTab == 2,
-                            action: { selectedTab = 2 }
-                        )
+                        // Photo Approval Button
+                        Button(action: {
+                            showingPhotoApprovals = true
+                        }) {
+                            ZStack {
+                                Image(systemName: "photo.badge.checkmark")
+                                    .font(.title2)
+                                    .foregroundColor(themeColor)
+                                
+                                // Badge for pending photos
+                                if !photoApprovalService.pendingPhotos.isEmpty {
+                                    Text("\(photoApprovalService.pendingPhotos.count)")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .frame(width: 16, height: 16)
+                                        .background(
+                                            Circle()
+                                                .fill(Color.red)
+                                        )
+                                        .offset(x: 8, y: -8)
+                                }
+                            }
+                            .padding()
+                        }
+                        
+                        Button(action: {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                selectedTheme = selectedTheme == .light ? .dark : .light
+                                isAnimating.toggle()
+                            }
+                        }) {
+                            Image(systemName: selectedTheme.icon)
+                                .font(.title2)
+                                .foregroundColor(selectedTheme == .light ? Color(hex: "#a2cee3") : Color(hex: "#3b82f6"))
+                                .padding()
+                                .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                        }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-                    
-                    // Tab Content
-                    TabView(selection: $selectedTab) {
-                        ParentOverviewView(
-                            authService: authService,
-                            choreService: choreService,
-                            showingAddChild: $showingAddChild,
-                            selectedChild: $selectedChild,
-                            showingChildDetails: $showingChildDetails
-                        )
-                        .tag(0)
-                        
-                        ParentCalendarView(
-                            choreService: choreService,
-                            authService: authService
-                        )
-                        .tag(1)
-                        
-                        ParentSettingsView(
-                            selectedTheme: $selectedTheme,
-                            authService: authService,
-                            isAnimating: $isAnimating
-                        )
-                        .tag(2)
-                    }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    .padding(.top, 20)
                 }
                 .padding(.bottom, 16)
+                
+                // Tab Selector
+                HStack(spacing: 0) {
+                    TabButton(
+                        title: localizationService.localizedString(for: "overview"),
+                        icon: "house",
+                        isSelected: selectedTab == 0,
+                        action: { selectedTab = 0 }
+                    )
+                    
+                    TabButton(
+                        title: localizationService.localizedString(for: "calendar"),
+                        icon: "calendar",
+                        isSelected: selectedTab == 1,
+                        action: { selectedTab = 1 }
+                    )
+                    
+                    TabButton(
+                        title: localizationService.localizedString(for: "settings"),
+                        icon: "gearshape",
+                        isSelected: selectedTab == 2,
+                        action: { selectedTab = 2 }
+                    )
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+                
+                // Tab Content
+                TabView(selection: $selectedTab) {
+                    ParentOverviewView(
+                        authService: authService,
+                        choreService: choreService,
+                        showingAddChild: $showingAddChild,
+                        selectedChild: $selectedChild,
+                        showingChildDetails: $showingChildDetails
+                    )
+                    .tag(0)
+                    
+                    ParentCalendarView(
+                        choreService: choreService,
+                        authService: authService,
+                        photoApprovalService: photoApprovalService
+                    )
+                    .tag(1)
+                    
+                    ParentSettingsView(
+                        selectedTheme: $selectedTheme,
+                        authService: authService,
+                        isAnimating: $isAnimating
+                    )
+                    .tag(2)
+                }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
+            .background(Color(.systemGroupedBackground))
             .navigationBarHidden(true)
         }
         .preferredColorScheme(selectedTheme == .light ? .light : .dark)
@@ -105,18 +197,7 @@ struct ParentDashboardView: View {
         .fullScreenCover(item: $selectedChild) { child in
                             ChildDetailsView(child: child, authService: authService, choreService: choreService)
         }
-        .onAppear {
-            // Load chores from Firestore when parent dashboard appears
-            Task {
-                await choreService.loadChoresFromFirestore()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .childPointsUpdated)) { _ in
-            // Refresh children data when points are updated
-            if let parentId = authService.currentParent?.id {
-                authService.refreshChildrenData(parentId: parentId)
-            }
-        }
+        // Photo approval feature disabled in this build
     }
 }
 
@@ -178,13 +259,7 @@ struct FamilyOverviewCard: View {
     }
     
     private var totalFamilyPoints: Int {
-        let total = authService.currentParent?.children.reduce(0) { $0 + $1.totalPointsEarned } ?? 0
-        print("🔍 Family Overview - Total Points: \(total)")
-        print("🔍 Children count: \(authService.currentParent?.children.count ?? 0)")
-        for child in authService.currentParent?.children ?? [] {
-            print("🔍 Child: \(child.name) - Points: \(child.points), Total Earned: \(child.totalPointsEarned)")
-        }
-        return total
+        authService.currentParent?.children.reduce(0) { $0 + $1.points } ?? 0
     }
     
 
@@ -214,8 +289,7 @@ struct StatCard: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .background(Color(.systemGray6))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .cornerRadius(12)
     }
 }
 
@@ -262,7 +336,7 @@ struct ChildrenManagementSection: View {
         .padding(20)
         .background(Color(.systemBackground))
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -276,7 +350,7 @@ struct ChildRowView: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                // Child Avatar
+                // Child Avatar (fallback to letter circle; no avatar field in model)
                 Circle()
                     .fill(themeColor.opacity(0.2))
                     .frame(width: 50, height: 50)
@@ -358,7 +432,6 @@ struct QuickActionsSection: View {
     @State private var showingChoreManagement = false
     @State private var showingRewardManagement = false
     @State private var showingStatistics = false
-    @State private var showingVoiceTasks = false
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -387,14 +460,6 @@ struct QuickActionsSection: View {
                 }
                 
                 QuickActionCard(
-                    title: "Voice Tasks",
-                    icon: "mic.fill",
-                    color: .blue
-                ) {
-                    showingVoiceTasks = true
-                }
-                
-                QuickActionCard(
                     title: "Manage Rewards",
                     icon: "gift.fill",
                     color: .purple
@@ -415,22 +480,16 @@ struct QuickActionsSection: View {
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-        .fullScreenCover(isPresented: $showingChoreManagement) {
+        .sheet(isPresented: $showingChoreManagement) {
             ChoreManagementView(choreService: choreService, authService: authService)
         }
-        .fullScreenCover(isPresented: $showingRewardManagement) {
+        .sheet(isPresented: $showingRewardManagement) {
             ManageRewardsView(rewardService: rewardService, authService: authService)
         }
-        .fullScreenCover(isPresented: $showingStatistics) {
+        .sheet(isPresented: $showingStatistics) {
             StatisticsView(
                 choreService: choreService,
                 rewardService: rewardService,
-                authService: authService
-            )
-        }
-        .fullScreenCover(isPresented: $showingVoiceTasks) {
-            VoiceTaskCreationView(
-                choreService: choreService,
                 authService: authService
             )
         }
@@ -470,7 +529,8 @@ struct AddChildView: View {
     @ObservedObject var authService: AuthService
     @Environment(\.dismiss) private var dismiss
     @State private var childName = ""
-    @State private var generatedPIN = ""
+    @State private var customPIN = ""
+    @State private var selectedAvatar = ChildAvatar.boy
     @State private var showingAlert = false
     @State private var alertMessage = ""
     
@@ -496,6 +556,41 @@ struct AddChildView: View {
                 }
                 .padding(.top, 40)
                 
+                // Avatar Selection - Simple + Button Interface
+                VStack(spacing: 16) {
+                    Text("Choose Avatar")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    HStack(spacing: 20) {
+                        ForEach(ChildAvatar.allCases, id: \.self) { avatar in
+                            Button(action: {
+                                selectedAvatar = avatar
+                            }) {
+                                VStack(spacing: 8) {
+                                    ZStack {
+                                        AvatarView(avatarName: avatar.rawValue, size: 80, themeColor: themeColor)
+                                        
+                                        // Selection indicator
+                                        if selectedAvatar == avatar {
+                                            Circle()
+                                                .stroke(themeColor, lineWidth: 4)
+                                                .frame(width: 88, height: 88)
+                                        }
+                                    }
+                                    
+                                    Text(avatar.displayName)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(selectedAvatar == avatar ? themeColor : .gray)
+                                }
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                }
+                .padding(.bottom, 20)
+                
                 // Form
                 VStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -513,23 +608,16 @@ struct AddChildView: View {
                             .font(.headline)
                             .foregroundColor(.primary)
                         
-                        HStack {
-                            TextField("PIN will be generated", text: .constant(generatedPIN.isEmpty ? "Click Generate" : generatedPIN))
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .disabled(true)
-                            
-                            Button(action: generatePIN) {
-                                Text("Generate")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(themeColor)
-                                    .cornerRadius(8)
+                        TextField("Enter 4-digit PIN", text: $customPIN)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.numberPad)
+                            .onChange(of: customPIN) { _, newValue in
+                                if newValue.count > 4 {
+                                    customPIN = String(newValue.prefix(4))
+                                }
                             }
-                        }
                     }
+                    
                 }
                 .padding(.horizontal, 20)
                 
@@ -574,45 +662,30 @@ struct AddChildView: View {
         } message: {
             Text(alertMessage)
         }
-        .onAppear {
-            generatePIN()
-        }
     }
     
     private var canAddChild: Bool {
-        !childName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !generatedPIN.isEmpty
-    }
-    
-    private func generatePIN() {
-        generatedPIN = String(format: "%04d", Int.random(in: 1000...9999))
+        !childName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && 
+        customPIN.count == 4 && 
+        customPIN.allSatisfy { $0.isNumber }
     }
     
     private func addChild() {
-        guard let parent = authService.currentParent else {
-            alertMessage = "Error: Parent not found"
-            showingAlert = true
-            return
-        }
-        
         let trimmedName = childName.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Check if PIN already exists
-        let existingPINs = parent.children.map { $0.pin }
-        if existingPINs.contains(generatedPIN) {
-            alertMessage = "Error: PIN already exists. Please generate a new PIN."
-            showingAlert = true
-            generatePIN()
-            return
+        Task {
+            let generatedPin = await authService.addChild(name: trimmedName)
+            
+            if !generatedPin.isEmpty {
+                alertMessage = "Child '\(trimmedName)' added successfully with PIN: \(generatedPin)"
+                showingAlert = true
+                childName = ""
+                customPIN = ""
+            } else {
+                alertMessage = authService.errorMessage ?? "Failed to add child"
+                showingAlert = true
+            }
         }
-        
-        // Create new child
-        let newChild = Child(name: trimmedName, pin: generatedPIN, parentId: parent.id)
-        
-        // Add child to parent
-        authService.addChild(newChild)
-        
-        alertMessage = "Child '\(trimmedName)' added successfully with PIN: \(generatedPIN)"
-        showingAlert = true
     }
 }
 
@@ -774,7 +847,6 @@ struct ChildDetailsView: View {
 struct ParentOverviewView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var choreService: ChoreService
-    @StateObject private var rewardService = RewardService()
     @Binding var showingAddChild: Bool
     @Binding var selectedChild: Child?
     @Binding var showingChildDetails: Bool
@@ -784,10 +856,13 @@ struct ParentOverviewView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+                // Quick Actions Section (moved to top)
+                QuickActionsSection(choreService: choreService, authService: authService)
+                
                 // Family Overview Card
                 FamilyOverviewCard(authService: authService, choreService: choreService)
                 
-                // Children Management Section
+                // Children Management Section (moved to bottom)
                 ChildrenManagementSection(
                     authService: authService,
                     showingAddChild: $showingAddChild,
@@ -795,166 +870,24 @@ struct ParentOverviewView: View {
                     showingChildDetails: $showingChildDetails
                 )
                 
-                // Quick Actions Section
-                if authService.currentParent != nil {
-                    QuickActionsSection(choreService: choreService, authService: authService)
-                    
-                    // Redeemed Rewards Section
-                    RedeemedRewardsSection(rewardService: rewardService, authService: authService)
-                } else {
-                    // Show loading or error state
-                    VStack(spacing: 16) {
-                        HStack {
-                            Image(systemName: "bolt.fill")
-                                .font(.title2)
-                                .foregroundColor(themeColor)
-                            Text("Quick Actions")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                            Spacer()
-                        }
-                        
-                        Text("Loading parent data...")
-                            .foregroundColor(.gray)
-                            .padding()
-                    }
-                    .padding(20)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(16)
-                    .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                }
-                
                 Spacer(minLength: 100)
             }
             .padding(.horizontal, 20)
         }
         .background(Color(.systemGroupedBackground))
-    }
-}
-
-// MARK: - Redeemed Rewards Section
-struct RedeemedRewardsSection: View {
-    @ObservedObject var rewardService: RewardService
-    @ObservedObject var authService: AuthService
-    
-    private let themeColor = Color(hex: "#a2cee3")
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "gift.fill")
-                    .font(.title2)
-                    .foregroundColor(themeColor)
-                Text("Redeemed Rewards")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                Spacer()
-            }
-            
-            if redeemedRewards.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "gift")
-                        .font(.system(size: 40))
-                        .foregroundColor(.gray)
-                    
-                    Text("No rewards redeemed yet")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                }
-                .padding(.vertical, 20)
-            } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(redeemedRewards) { reward in
-                        RedeemedRewardRow(reward: reward, authService: authService)
-                    }
-                }
-            }
-        }
-        .padding(20)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
-    }
-    
-    private var redeemedRewards: [Reward] {
-        let childrenIds = authService.currentParent?.children.map { $0.id } ?? []
-        return rewardService.getPurchasedRewards().filter { reward in
-            if let purchasedByChildId = reward.purchasedByChildId {
-                return childrenIds.contains(purchasedByChildId)
-            }
-            return false
+        .refreshable {
+            // Simple refresh with animation
+            try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
         }
     }
-}
-
-// MARK: - Redeemed Reward Row
-struct RedeemedRewardRow: View {
-    let reward: Reward
-    @ObservedObject var authService: AuthService
     
-    private let themeColor = Color(hex: "#a2cee3")
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            // Reward Icon
-            Circle()
-                .fill(Color(hex: reward.category.color).opacity(0.2))
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Image(systemName: reward.category.icon)
-                        .font(.title3)
-                        .foregroundColor(Color(hex: reward.category.color))
-                )
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(reward.name)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.primary)
-                
-                if let purchasedAt = reward.purchasedAt {
-                    Text("Redeemed \(purchasedAt.formatted(date: .abbreviated, time: .omitted))")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-                
-                if let childName = childName {
-                    Text("by \(childName)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            
-            Spacer()
-            
-            // Points Spent
-            HStack(spacing: 4) {
-                Image(systemName: "star.fill")
-                    .font(.caption)
-                    .foregroundColor(.yellow)
-                Text("-\(reward.points)")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.red)
-            }
-        }
-        .padding(12)
-        .background(Color(.systemGray6))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-    }
-    
-    private var childName: String? {
-        if let purchasedByChildId = reward.purchasedByChildId {
-            return authService.currentParent?.children.first { $0.id == purchasedByChildId }?.name
-        }
-        return nil
-    }
 }
 
 // MARK: - Parent Calendar View
 struct ParentCalendarView: View {
     @ObservedObject var choreService: ChoreService
     @ObservedObject var authService: AuthService
+    @ObservedObject var photoApprovalService: PhotoApprovalService
     @State private var selectedChore: Chore?
     @State private var currentMonth = Date()
     
@@ -1105,7 +1038,8 @@ struct ParentCalendarView: View {
                         ParentChoreRow(
                             chore: familyChores[index],
                             choreService: choreService,
-                            authService: authService
+                            authService: authService,
+                            photoApprovalService: photoApprovalService
                         )
                         .padding(.horizontal, 20)
                         .padding(.vertical, 8)
@@ -1146,7 +1080,7 @@ struct ParentCalendarView: View {
 
 // MARK: - Parent Settings View
 struct ParentSettingsView: View {
-    @Binding var selectedTheme: Theme
+    @Binding var selectedTheme: AppTheme
     @ObservedObject var authService: AuthService
     @Binding var isAnimating: Bool
     
@@ -1178,11 +1112,12 @@ struct ParentSettingsView: View {
                 
                 // Settings List
                 VStack(spacing: 0) {
-                    // Appearance Section
+                    // Language Section
                     VStack(spacing: 0) {
                         HStack {
-                            Text("Appearance")
+                            Text("Language")
                                 .font(.headline)
+                                .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             Spacer()
                         }
@@ -1190,38 +1125,39 @@ struct ParentSettingsView: View {
                         .padding(.vertical, 12)
                         .background(Color(.systemBackground))
                         
-                        HStack {
-                            Image(systemName: selectedTheme == .light ? "sun.max.fill" : "moon.fill")
-                                .foregroundColor(selectedTheme == .light ? .yellow : themeColor)
-                                .rotationEffect(.degrees(isAnimating ? 360 : 0))
-                            
-                            Text(selectedTheme == .light ? "Light Mode" : "Dark Mode")
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            Toggle("", isOn: Binding(
-                                get: { selectedTheme == .light },
-                                set: { newValue in
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.6, blendDuration: 0.3)) {
-                                        selectedTheme = newValue ? .light : .dark
-                                        isAnimating.toggle()
-                                    }
-                                }
-                            ))
+                        Button(action: {
+                            // Language picker removed
+                        }) {
+                            HStack {
+                                Text("🇺🇸")
+                                    .font(.title2)
+                                
+                                Text("English")
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(Color(.systemBackground))
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                        .background(Color(.systemBackground))
+                        .buttonStyle(PlainButtonStyle())
                     }
                     .cornerRadius(12)
                     .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
                     
                     // Family Section
                     VStack(spacing: 0) {
                         HStack {
                             Text("Family")
                                 .font(.headline)
+                                .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             Spacer()
                         }
@@ -1245,12 +1181,15 @@ struct ParentSettingsView: View {
                     }
                     .cornerRadius(12)
                     .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 24)
                     
                     // Account Section
                     VStack(spacing: 0) {
                         HStack {
                             Text("Account")
                                 .font(.headline)
+                                .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             Spacer()
                         }
@@ -1293,6 +1232,8 @@ struct ParentChoreRow: View {
     let chore: Chore
     @ObservedObject var choreService: ChoreService
     @ObservedObject var authService: AuthService
+    @ObservedObject var photoApprovalService: PhotoApprovalService
+    @State private var showingPhotoDetail = false
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -1340,6 +1281,18 @@ struct ParentChoreRow: View {
                         }
                     }
                 }
+                
+                // Photo Status Section
+                if let assignedChildId = chore.assignedToChildId,
+                   let parentId = authService.currentParent?.id {
+                    PhotoStatusSection(
+                        chore: chore,
+                        childId: assignedChildId,
+                        parentId: parentId,
+                        photoApprovalService: photoApprovalService,
+                        showingPhotoDetail: $showingPhotoDetail
+                    )
+                }
             }
             
             Spacer()
@@ -1357,8 +1310,163 @@ struct ParentChoreRow: View {
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .sheet(isPresented: $showingPhotoDetail) {
+            // Photo approval detail disabled in this build
+            EmptyView()
+        }
     }
 } 
+
+// MARK: - Photo Status Section
+struct PhotoStatusSection: View {
+    let chore: Chore
+    let childId: UUID
+    let parentId: UUID
+    @ObservedObject var photoApprovalService: PhotoApprovalService
+    @Binding var showingPhotoDetail: Bool
+    
+    private let themeColor = Color(hex: "#a2cee3")
+    
+    var body: some View {
+        let photos = photoApprovalService.getPhotosForChore(choreId: chore.id, childId: childId)
+        let pendingPhoto = photos.first { $0.approvalStatus == .pending }
+        let approvedPhoto = photos.first { $0.approvalStatus == .approved }
+        let rejectedPhoto = photos.first { $0.approvalStatus == .rejected }
+        
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "camera.fill")
+                    .font(.caption)
+                    .foregroundColor(themeColor)
+                Text("Photo Status")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+            
+            if let pendingPhoto = pendingPhoto {
+                // Pending Photo - Show approve/reject buttons
+                HStack(spacing: 12) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.fill")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                        Text("Photo uploaded - needs approval")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            photoApprovalService.approvePhoto(pendingPhoto, approvedBy: parentId)
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark")
+                                    .font(.caption2)
+                                Text("Approve")
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.green)
+                            .cornerRadius(6)
+                        }
+                        
+                        Button(action: {
+                            photoApprovalService.rejectPhoto(pendingPhoto, rejectedBy: parentId)
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "xmark")
+                                    .font(.caption2)
+                                Text("Reject")
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.red)
+                            .cornerRadius(6)
+                        }
+                        
+                        Button(action: {
+                            showingPhotoDetail = true
+                        }) {
+                            Image(systemName: "eye.fill")
+                                .font(.caption2)
+                                .foregroundColor(themeColor)
+                                .padding(4)
+                                .background(themeColor.opacity(0.1))
+                                .cornerRadius(4)
+                        }
+                    }
+                }
+            } else if let approvedPhoto = approvedPhoto {
+                // Approved Photo
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                    Text("Photo approved")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        showingPhotoDetail = true
+                    }) {
+                        Image(systemName: "eye.fill")
+                            .font(.caption2)
+                            .foregroundColor(themeColor)
+                            .padding(4)
+                            .background(themeColor.opacity(0.1))
+                            .cornerRadius(4)
+                    }
+                }
+            } else if let rejectedPhoto = rejectedPhoto {
+                // Rejected Photo
+                HStack(spacing: 6) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                    Text("Photo rejected")
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        showingPhotoDetail = true
+                    }) {
+                        Image(systemName: "eye.fill")
+                            .font(.caption2)
+                            .foregroundColor(themeColor)
+                            .padding(4)
+                            .background(themeColor.opacity(0.1))
+                            .cornerRadius(4)
+                    }
+                }
+            } else {
+                // No photo uploaded
+                HStack(spacing: 6) {
+                    Image(systemName: "camera")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                    Text("No photo uploaded")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        .padding(.top, 4)
+    }
+}
 
 // MARK: - Tab Button
 struct TabButton: View {
@@ -1371,66 +1479,27 @@ struct TabButton: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundColor(isSelected ? themeColor : .gray)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(isSelected ? themeColor : (Color.primary.opacity(0.7)))
+                    .scaleEffect(isSelected ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isSelected)
                 
                 Text(title)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(isSelected ? themeColor : .gray)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(isSelected ? themeColor : (Color.primary.opacity(0.8)))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? themeColor.opacity(0.1) : Color.clear)
+                    .fill(isSelected ? themeColor.opacity(0.15) : Color.clear)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isSelected)
             )
         }
-    }
-} 
-
-// MARK: - Parent Dashboard Header
-struct ParentDashboardHeader: View {
-    @ObservedObject var authService: AuthService
-    @Binding var showingAddChild: Bool
-    @AppStorage("selectedTheme") private var selectedTheme: Theme = .light
-    @State private var isAnimating = false
-    
-    private let themeColor = Color(hex: "#a2cee3")
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Welcome back!")
-                        .font(.title2)
-                        .foregroundColor(.gray)
-                    
-                    Text("Family Dashboard")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(themeColor)
-                }
-                
-                Spacer()
-                
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        selectedTheme = selectedTheme == .light ? .dark : .light
-                        isAnimating.toggle()
-                    }
-                }) {
-                    Image(systemName: selectedTheme.systemName)
-                        .font(.title2)
-                        .foregroundColor(selectedTheme == .light ? .yellow : themeColor)
-                        .padding()
-                        .rotationEffect(.degrees(isAnimating ? 360 : 0))
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-        }
-        .padding(.bottom, 16)
+        .buttonStyle(.plain)
     }
 } 
