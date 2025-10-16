@@ -208,9 +208,15 @@ struct ParentDashboardView: View {
             AddChildView(authService: authService)
         }
         .fullScreenCover(item: $selectedChild) { child in
-                            ChildDetailsView(child: child, authService: authService, choreService: choreService)
+            ChildDetailsView(child: child, authService: authService, choreService: choreService)
         }
-        // Photo approval feature disabled in this build
+        .sheet(isPresented: $showingPhotoApprovals) {
+            PhotoApprovalListView(
+                photoApprovalService: photoApprovalService,
+                choreService: choreService,
+                authService: authService
+            )
+        }
     }
 }
 
