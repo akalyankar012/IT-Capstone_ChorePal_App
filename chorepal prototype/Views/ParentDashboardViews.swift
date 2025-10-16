@@ -1451,10 +1451,10 @@ struct PhotoStatusSection: View {
     private let themeColor = Color(hex: "#a2cee3")
     
     var body: some View {
-        let photos = photoApprovalService.getPhotosForChore(choreId: chore.id, childId: childId)
-        let pendingPhoto = photos.first { $0.approvalStatus == .pending }
-        let approvedPhoto = photos.first { $0.approvalStatus == .approved }
-        let rejectedPhoto = photos.first { $0.approvalStatus == .rejected }
+        // Temporary: Photo approval functionality will be accessed through dedicated views
+        let pendingPhoto: ChorePhoto? = nil
+        let approvedPhoto: ChorePhoto? = nil
+        let rejectedPhoto: ChorePhoto? = nil
         
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -1484,7 +1484,9 @@ struct PhotoStatusSection: View {
                     
                     HStack(spacing: 8) {
                         Button(action: {
-                            photoApprovalService.approvePhoto(pendingPhoto, approvedBy: parentId)
+                            Task {
+                                _ = await photoApprovalService.approvePhoto(pendingPhoto, approvedBy: parentId)
+                            }
                         }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark")
@@ -1501,7 +1503,9 @@ struct PhotoStatusSection: View {
                         }
                         
                         Button(action: {
-                            photoApprovalService.rejectPhoto(pendingPhoto, rejectedBy: parentId)
+                            Task {
+                                _ = await photoApprovalService.rejectPhoto(pendingPhoto, rejectedBy: parentId, feedback: "Needs improvement")
+                            }
                         }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "xmark")

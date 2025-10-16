@@ -119,6 +119,9 @@ struct Chore: Identifiable, Codable {
     var isRequired: Bool
     var assignedToChildId: UUID?
     var createdAt: Date
+    var requiresPhotoProof: Bool = true
+    var photoProofStatus: PhotoProofStatus?
+    var parentFeedback: String?
     
     static let sampleChores = [
         Chore(title: "Take Out Trash", 
