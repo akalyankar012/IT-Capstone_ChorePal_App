@@ -122,23 +122,29 @@ struct ChildDashboardView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             print("🎉 DEBUG: Total chores loaded: \(self.choreService.chores.count)")
             
+            // Get list of previously celebrated chores
+            let celebratedKey = "celebratedChores_\(childId.uuidString)"
+            let celebratedIds = UserDefaults.standard.array(forKey: celebratedKey) as? [String] ?? []
+            print("🎉 DEBUG: Previously celebrated chore IDs: \(celebratedIds.count)")
+            
             // Find ALL chores for this child
             let childChores = self.choreService.chores.filter { $0.assignedToChildId == childId }
             print("🎉 DEBUG: Child's chores: \(childChores.count)")
             
-            // Find chores that were approved
-            let approvedChores = childChores.filter { chore in
+            // Find chores that were approved BUT NOT YET CELEBRATED
+            let newlyApprovedChores = childChores.filter { chore in
                 let isApproved = chore.photoProofStatus == .approved
-                print("🎉 DEBUG: Chore '\(chore.title)' - status: \(String(describing: chore.photoProofStatus)), completed: \(chore.isCompleted), approved: \(isApproved)")
-                return isApproved && chore.isCompleted
+                let alreadyCelebrated = celebratedIds.contains(chore.id.uuidString)
+                print("🎉 DEBUG: Chore '\(chore.title)' - status: \(String(describing: chore.photoProofStatus)), completed: \(chore.isCompleted), approved: \(isApproved), celebrated: \(alreadyCelebrated)")
+                return isApproved && chore.isCompleted && !alreadyCelebrated
             }
             
-            print("🎉 DEBUG: Found \(approvedChores.count) approved chores")
+            print("🎉 DEBUG: Found \(newlyApprovedChores.count) NEW approved chores (not yet celebrated)")
             
-            // Show modal if there are approved chores
-            if !approvedChores.isEmpty {
-                print("🎉 DEBUG: Showing celebration modal!")
-                self.newlyApprovedChores = approvedChores
+            // Show modal if there are NEW approved chores
+            if !newlyApprovedChores.isEmpty {
+                print("🎉 DEBUG: Showing celebration modal for \(newlyApprovedChores.count) chores!")
+                self.newlyApprovedChores = newlyApprovedChores
                 
                 // Small delay for smooth appearance
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -146,8 +152,13 @@ struct ChildDashboardView: View {
                         self.showApprovalCelebration = true
                     }
                 }
+                
+                // Mark these chores as celebrated
+                let newCelebratedIds = celebratedIds + newlyApprovedChores.map { $0.id.uuidString }
+                UserDefaults.standard.set(newCelebratedIds, forKey: celebratedKey)
+                print("🎉 DEBUG: Marked \(newlyApprovedChores.count) chores as celebrated. Total celebrated: \(newCelebratedIds.count)")
             } else {
-                print("🎉 DEBUG: No approved chores to celebrate")
+                print("🎉 DEBUG: No new approved chores to celebrate")
             }
         }
     }
