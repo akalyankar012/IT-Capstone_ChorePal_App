@@ -59,17 +59,32 @@ struct PhotoCaptureFlow: View {
                         
                         Spacer()
                         
-                        Button(action: checkCameraPermissionAndOpen) {
-                            HStack {
-                                Image(systemName: "camera.fill")
-                                Text("Open Camera")
+                        VStack(spacing: 12) {
+                            Button(action: checkCameraPermissionAndOpen) {
+                                HStack {
+                                    Image(systemName: "camera.fill")
+                                    Text("Take Photo")
+                                }
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(themeColor)
+                                .cornerRadius(12)
                             }
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(themeColor)
-                            .cornerRadius(12)
+                            
+                            Button(action: { showCamera = true }) {
+                                HStack {
+                                    Image(systemName: "photo.on.rectangle")
+                                    Text("Choose from Library")
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(themeColor)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                            }
                         }
                         .padding(.horizontal, 20)
                         .padding(.bottom, 40)
@@ -246,7 +261,18 @@ struct CameraPicker: UIViewControllerRepresentable {
     
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
-        picker.sourceType = .camera
+        
+        // Check if camera is available
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            picker.sourceType = .camera
+            picker.cameraCaptureMode = .photo
+            picker.cameraDevice = .rear
+            picker.allowsEditing = false
+        } else {
+            // Fallback to photo library if camera not available
+            picker.sourceType = .photoLibrary
+        }
+        
         picker.delegate = context.coordinator
         return picker
     }
