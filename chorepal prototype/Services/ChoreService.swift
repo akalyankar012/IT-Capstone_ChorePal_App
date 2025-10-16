@@ -217,6 +217,11 @@ class ChoreService: ObservableObject {
                         let choreId = UUID(uuidString: document.documentID) ?? UUID()
                         let assignedToChildId = (data["assignedToChildId"] as? String).flatMap { UUID(uuidString: $0) }
                         
+                        // Load photo proof fields
+                        let requiresPhotoProof = data["requiresPhotoProof"] as? Bool ?? true
+                        let photoProofStatus: PhotoProofStatus? = (data["photoProofStatus"] as? String).flatMap { PhotoProofStatus(rawValue: $0) }
+                        let parentFeedback = data["parentFeedback"] as? String
+                        
                         let chore = Chore(
                             id: choreId,
                             title: title,
@@ -226,7 +231,10 @@ class ChoreService: ObservableObject {
                             isCompleted: isCompleted,
                             isRequired: isRequired,
                             assignedToChildId: assignedToChildId,
-                            createdAt: createdAt
+                            createdAt: createdAt,
+                            requiresPhotoProof: requiresPhotoProof,
+                            photoProofStatus: photoProofStatus,
+                            parentFeedback: parentFeedback
                         )
                         
                         loadedChores.append(chore)
@@ -290,6 +298,11 @@ class ChoreService: ObservableObject {
                         
                         let choreId = UUID(uuidString: document.documentID) ?? UUID()
                         
+                        // Load photo proof fields
+                        let requiresPhotoProof = data["requiresPhotoProof"] as? Bool ?? true
+                        let photoProofStatus: PhotoProofStatus? = (data["photoProofStatus"] as? String).flatMap { PhotoProofStatus(rawValue: $0) }
+                        let parentFeedback = data["parentFeedback"] as? String
+                        
                         let chore = Chore(
                             id: choreId,
                             title: title,
@@ -299,7 +312,10 @@ class ChoreService: ObservableObject {
                             isCompleted: isCompleted,
                             isRequired: isRequired,
                             assignedToChildId: childId,
-                            createdAt: createdAt
+                            createdAt: createdAt,
+                            requiresPhotoProof: requiresPhotoProof,
+                            photoProofStatus: photoProofStatus,
+                            parentFeedback: parentFeedback
                         )
                         
                         loadedChores.append(chore)
@@ -489,6 +505,11 @@ class ChoreService: ObservableObject {
         let choreId = UUID(uuidString: document.documentID) ?? UUID()
         let assignedToChildId = (data["assignedToChildId"] as? String).flatMap { UUID(uuidString: $0) }
         
+        // Load photo proof fields
+        let requiresPhotoProof = data["requiresPhotoProof"] as? Bool ?? true
+        let photoProofStatus: PhotoProofStatus? = (data["photoProofStatus"] as? String).flatMap { PhotoProofStatus(rawValue: $0) }
+        let parentFeedback = data["parentFeedback"] as? String
+        
         return Chore(
             id: choreId,
             title: title,
@@ -498,7 +519,10 @@ class ChoreService: ObservableObject {
             isCompleted: isCompleted,
             isRequired: isRequired,
             assignedToChildId: assignedToChildId,
-            createdAt: createdAt
+            createdAt: createdAt,
+            requiresPhotoProof: requiresPhotoProof,
+            photoProofStatus: photoProofStatus,
+            parentFeedback: parentFeedback
         )
     }
     
@@ -574,17 +598,26 @@ class ChoreService: ObservableObject {
     
     private func saveChoreToFirestoreWithRetry(_ chore: Chore, retryCount: Int = 0) async {
         do {
-            let choreData: [String: Any] = [
+            var choreData: [String: Any] = [
                 "title": chore.title,
                 "description": chore.description,
                 "points": chore.points,
                 "dueDate": Timestamp(date: chore.dueDate),
                 "isCompleted": chore.isCompleted,
                 "isRequired": chore.isRequired,
-                "assignedToChildId": chore.assignedToChildId?.uuidString,
+                "assignedToChildId": chore.assignedToChildId?.uuidString ?? NSNull(),
+                "requiresPhotoProof": chore.requiresPhotoProof,
                 "createdAt": Timestamp(date: chore.createdAt),
                 "updatedAt": FieldValue.serverTimestamp()
             ]
+            
+            // Add photo proof fields if present
+            if let photoProofStatus = chore.photoProofStatus {
+                choreData["photoProofStatus"] = photoProofStatus.rawValue
+            }
+            if let parentFeedback = chore.parentFeedback {
+                choreData["parentFeedback"] = parentFeedback
+            }
             
             try await db.collection("chores").document(chore.id.uuidString).setData(choreData)
             print("✅ Chore saved to Firestore: \(chore.title)")
@@ -607,19 +640,28 @@ class ChoreService: ObservableObject {
     
     private func updateChoreInFirestoreWithRetry(_ chore: Chore, retryCount: Int = 0) async {
         do {
-            let choreData: [String: Any] = [
+            var choreData: [String: Any] = [
                 "title": chore.title,
                 "description": chore.description,
                 "points": chore.points,
                 "dueDate": chore.dueDate,
                 "isCompleted": chore.isCompleted,
                 "isRequired": chore.isRequired,
-                "assignedToChildId": chore.assignedToChildId?.uuidString,
+                "assignedToChildId": chore.assignedToChildId?.uuidString ?? NSNull(),
+                "requiresPhotoProof": chore.requiresPhotoProof,
                 "updatedAt": FieldValue.serverTimestamp()
             ]
             
+            // Add photo proof fields if present
+            if let photoProofStatus = chore.photoProofStatus {
+                choreData["photoProofStatus"] = photoProofStatus.rawValue
+            }
+            if let parentFeedback = chore.parentFeedback {
+                choreData["parentFeedback"] = parentFeedback
+            }
+            
             try await db.collection("chores").document(chore.id.uuidString).updateData(choreData)
-            print("✅ Chore updated in Firestore: \(chore.title)")
+            print("✅ Chore updated in Firestore: \(chore.title) (photoStatus: \(chore.photoProofStatus?.rawValue ?? "none"))")
             
         } catch {
             print("❌ Error updating chore in Firestore: \(error)")
