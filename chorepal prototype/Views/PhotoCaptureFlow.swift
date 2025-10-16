@@ -193,25 +193,36 @@ struct PhotoCaptureFlow: View {
     }
     
     private func checkCameraPermissionAndOpen() {
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        print("🔍 DEBUG: Checking camera permission...")
+        print("🔍 DEBUG: Camera available: \(UIImagePickerController.isSourceTypeAvailable(.camera))")
+        
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        print("🔍 DEBUG: Camera permission status: \(status.rawValue)")
+        
+        switch status {
         case .authorized:
+            print("✅ DEBUG: Camera authorized, opening...")
             showCamera = true
             
         case .notDetermined:
+            print("⚠️ DEBUG: Camera permission not determined, requesting...")
             AVCaptureDevice.requestAccess(for: .video) { granted in
                 DispatchQueue.main.async {
+                    print("🔍 DEBUG: Permission granted: \(granted)")
                     if granted {
-                        showCamera = true
+                        self.showCamera = true
                     } else {
-                        cameraPermissionDenied = true
+                        self.cameraPermissionDenied = true
                     }
                 }
             }
             
         case .denied, .restricted:
+            print("❌ DEBUG: Camera permission denied or restricted")
             cameraPermissionDenied = true
             
         @unknown default:
+            print("❌ DEBUG: Unknown camera permission status")
             cameraPermissionDenied = true
         }
     }
@@ -260,20 +271,26 @@ struct CameraPicker: UIViewControllerRepresentable {
     @Environment(\.dismiss) private var dismiss
     
     func makeUIViewController(context: Context) -> UIImagePickerController {
+        print("🎥 DEBUG: Creating UIImagePickerController...")
         let picker = UIImagePickerController()
         
         // Check if camera is available
         if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            print("✅ DEBUG: Using camera source")
             picker.sourceType = .camera
             picker.cameraCaptureMode = .photo
             picker.cameraDevice = .rear
             picker.allowsEditing = false
         } else {
             // Fallback to photo library if camera not available
+            print("⚠️ DEBUG: Camera not available, using photo library")
             picker.sourceType = .photoLibrary
         }
         
         picker.delegate = context.coordinator
+        picker.modalPresentationStyle = .fullScreen
+        
+        print("🎥 DEBUG: UIImagePickerController configured with source: \(picker.sourceType.rawValue)")
         return picker
     }
     
