@@ -217,6 +217,16 @@ struct ParentDashboardView: View {
                 authService: authService
             )
         }
+        .onAppear {
+            // Start listening for pending photos when parent dashboard appears
+            if let parentId = authService.currentParent?.id {
+                photoApprovalService.startListening(for: parentId)
+            }
+        }
+        .onDisappear {
+            // Stop listening when leaving dashboard
+            photoApprovalService.stopListening()
+        }
     }
 }
 
