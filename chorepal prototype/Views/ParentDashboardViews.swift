@@ -17,11 +17,23 @@ struct AvatarView: View {
     var body: some View {
         Group {
             if let avatar = ChildAvatar(rawValue: avatarName) {
-                // Try to load the image first - use the correct imageset names
-                let imageName = avatar == .boy ? "boy_avatar" : "girl_avatar_1"
+                // Try to load any available images from the IT-Capstone asset names
+                let candidateNames: [String] = {
+                    switch avatar {
+                    case .boy:
+                        return [
+                            "boy_avatar", "boy_avatar_1", "boy_avatar_2", "boy_avatar_3", "boy_avatar_4", "boy"
+                        ]
+                    case .girl:
+                        return [
+                            "girl_avatar", "girl_avatar_1", "girl_avatar_2", "girl_avatar_3", "girl_avatar_4", "girl"
+                        ]
+                    }
+                }()
+                let resolvedName = candidateNames.first(where: { UIImage(named: $0) != nil })
                 
-                if UIImage(named: imageName) != nil {
-                    Image(imageName)
+                if let resolvedName = resolvedName {
+                    Image(resolvedName)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: size, height: size)
@@ -79,7 +91,9 @@ struct ParentDashboardView: View {
                 // Header with gradient background
                 VStack(spacing: 16) {
                     HStack {
-                        VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 12) {
+                            AvatarView(avatarName: AvatarStore.getParentAvatarName() ?? "boy", size: 44, themeColor: themeColor)
+                            VStack(alignment: .leading, spacing: 4) {
                             Text("Welcome back, \(authService.currentParent?.phoneNumber ?? "Parent")!")
                                 .font(.title2)
                                 .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
@@ -88,6 +102,7 @@ struct ParentDashboardView: View {
                                 .font(.system(size: 32, weight: .heavy))
                                 .foregroundColor(themeColor)
                                 .shadow(color: themeColor.opacity(0.3), radius: 2, x: 0, y: 1)
+                            }
                         }
                         
                         Spacer()
@@ -216,6 +231,12 @@ struct ParentDashboardView: View {
                 choreService: choreService,
                 authService: authService
             )
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: { showingAddChild = true }) { EmptyView() }
+                    .hidden()
+            }
         }
         .onAppear {
             // Start listening for pending photos when parent dashboard appears
@@ -1230,14 +1251,7 @@ struct ParentSettingsView: View {
             VStack(spacing: 20) {
                 // Profile Section
                 VStack(spacing: 16) {
-                    Circle()
-                        .fill(themeColor.opacity(0.2))
-                        .frame(width: 80, height: 80)
-                        .overlay(
-                            Image(systemName: "person.2.fill")
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundColor(themeColor)
-                        )
+                    AvatarView(avatarName: AvatarStore.getParentAvatarName() ?? "boy", size: 80, themeColor: themeColor)
                     
                     Text("Family Account")
                         .font(.title2)
@@ -1251,6 +1265,39 @@ struct ParentSettingsView: View {
                 
                 // Settings List
                 VStack(spacing: 0) {
+                    // Avatar selection
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("Choose Avatar")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                        
+                        HStack(spacing: 20) {
+                            ForEach(ChildAvatar.allCases, id: \.self) { avatar in
+                                Button(action: { AvatarStore.setParentAvatarName(avatar.rawValue) }) {
+                                    VStack(spacing: 8) {
+                                        AvatarView(avatarName: avatar.rawValue, size: 64, themeColor: themeColor)
+                                        Text(avatar.displayName)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
+                        .background(Color(.systemBackground))
+                    }
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+
                     // Language Section
                     VStack(spacing: 0) {
                         HStack {

@@ -21,11 +21,13 @@ struct ChildDashboardView: View {
         NavigationView {
             ZStack {
                 GradientBackground(theme: selectedTheme).ignoresSafeArea()
+                BackgroundChoresAnimation()
+                    .allowsHitTesting(false)
 
                 VStack(spacing: 0) {
                     // Top header (avatar + points + theme toggle)
                     HStack {
-                        AvatarView(avatarName: authService.currentChild?.name ?? "C", size: 50, themeColor: themeColor)
+                        AvatarView(avatarName: AvatarStore.getChildAvatarName(childId: authService.currentChild?.id ?? UUID()) ?? "boy", size: 50, themeColor: themeColor)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(authService.currentChild?.name ?? "Child")
                                 .font(.title3)

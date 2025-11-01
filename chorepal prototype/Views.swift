@@ -10,45 +10,75 @@ struct ContentView: View {
     @StateObject private var choreService = ChoreService()
     @StateObject private var rewardService = RewardService()
     @State private var chores = Chore.sampleChores
+    @State private var showCelebration = false
     
     var body: some View {
         NavigationStack {
             ZStack {
                 Color(.systemBackground)
                     .ignoresSafeArea()
+                // No global background animation; limited to child dashboard per request
+
+                // Celebration overlay when authenticated
+                if authService.authState == .authenticated {
+                    CelebrationView(isShowing: $showCelebration)
+                        .allowsHitTesting(false)
+                }
                 
                 // Authentication Flow
                 if authService.authState != .authenticated {
                     authenticationView
                 } else if selectedRole == .none {
                     RoleSelectionView(selectedRole: $selectedRole, selectedTheme: $selectedTheme, authService: authService)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal: .move(edge: .top).combined(with: .opacity)
+                        ))
                 } else if selectedRole == .parent && authService.authState == .authenticated {
-                    // Show Parent Dashboard for authenticated parents
                     ParentDashboardView(authService: authService)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
                 } else if selectedRole == .child && authService.authState == .authenticated {
-                    // Show Child Dashboard for authenticated children
                     ChildDashboardView(
                         authService: authService,
                         choreService: choreService,
                         rewardService: rewardService,
                         selectedRole: $selectedRole
                     )
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity).combined(with: .scale(scale: 0.95)),
+                        removal: .move(edge: .leading).combined(with: .opacity).combined(with: .scale(scale: 1.05))
+                    ))
                 } else {
                     TabView(selection: $selectedTab) {
                         NavigationView {
                             CalendarView(role: selectedRole, chores: $chores, achievementManager: achievementManager)
                         }
                         .tag(0)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .leading).combined(with: .opacity),
+                            removal: .move(edge: .trailing).combined(with: .opacity)
+                        ))
                         
                         NavigationView {
                             HomeView(role: selectedRole, chores: $chores, achievementManager: achievementManager, choreService: choreService, authService: authService)
                         }
                         .tag(1)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .leading).combined(with: .opacity),
+                            removal: .move(edge: .trailing).combined(with: .opacity)
+                        ))
                         
                         NavigationView {
                             SettingsView(role: selectedRole, selectedTheme: $selectedTheme, selectedRole: $selectedRole, selectedTab: $selectedTab, authService: authService)
                         }
                         .tag(2)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .leading).combined(with: .opacity),
+                            removal: .move(edge: .trailing).combined(with: .opacity)
+                        ))
                     }
                     .overlay(alignment: .bottom) {
                         // Custom Tab Bar
@@ -61,14 +91,25 @@ struct ContentView: View {
                             
                             ForEach(tabs, id: \.id) { tab in
                                 Button(action: {
-                                    selectedTab = tab.id
+                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                    impactFeedback.impactOccurred()
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0.3)) {
+                                        selectedTab = tab.id
+                                    }
                                 }) {
                                     VStack(spacing: 4) {
                                         Image(systemName: tab.icon)
-                                            .font(.system(size: 24))
+                                            .font(.system(size: 24, weight: .bold))
                                             .foregroundColor(selectedTab == tab.id ? .black : .gray)
+                                            .scaleEffect(selectedTab == tab.id ? 1.15 : 1.0)
+                                            .animation(.spring(response: 0.3, dampingFraction: 0.7, blendDuration: 0.2), value: selectedTab)
                                     }
                                     .frame(maxWidth: .infinity)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(selectedTab == tab.id ? Color.white.opacity(0.3) : Color.clear)
+                                            .animation(.spring(response: 0.3, dampingFraction: 0.7, blendDuration: 0.2), value: selectedTab)
+                                    )
                                 }
                             }
                         }
@@ -76,7 +117,7 @@ struct ContentView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 30)
                                 .fill(Color(.systemGray6))
-                                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+                                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
                         )
                         .padding(.horizontal, 40)
                         .padding(.bottom, 20)
@@ -85,7 +126,9 @@ struct ContentView: View {
             }
             .onChange(of: selectedRole) { newRole in
                 if newRole != .none {
-                    selectedTab = 1  // Reset to tasks tab when role changes
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7, blendDuration: 0.3)) {
+                        selectedTab = 1
+                    }
                 }
             }
         }
@@ -147,31 +190,50 @@ struct RoleSelectionView: View {
             
             Spacer()
             
-            // App Logo/Mascot
+            // App Logo with gentle animation
             Image("potato")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 240, height: 240)
+                .frame(width: 200, height: 200)
                 .cornerRadius(40)
                 .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                .scaleEffect(isAnimating ? 1.05 : 1.0)
+                .onAppear {
+                    withAnimation(
+                        .easeInOut(duration: 2.0)
+                        .repeatForever(autoreverses: true)
+                    ) {
+                        isAnimating = true
+                    }
+                }
                 .padding(.bottom, 40)
             
             VStack(spacing: 16) {
-                Text("Welcome to ChorePal!")
-                    .font(.system(size: 40, weight: .heavy))
+                Text("Welcome to ChorePal")
+                    .font(.system(size: 36, weight: .bold))
                     .foregroundColor(themeColor)
                     .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .opacity(1.0)
+                    .scaleEffect(isAnimating ? 0.98 : 1.02)
+                    .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true), value: isAnimating)
                 
                 Text("Who are you today?")
                     .font(.title2)
                     .foregroundColor(.gray)
                     .padding(.top, 8)
+                    .opacity(1.0)
+                    .scaleEffect(isAnimating ? 0.99 : 1.01)
+                    .animation(.easeInOut(duration: 4.5).repeatForever(autoreverses: true), value: isAnimating)
             }
             .padding(.bottom, 40)
             
             VStack(spacing: 20) {
                 Button(action: {
-                    withAnimation {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0.2)) {
                         selectedRole = .parent
                         authService.authState = .signUp
                     }
@@ -179,37 +241,46 @@ struct RoleSelectionView: View {
                     HStack {
                         Image(systemName: "person.2")
                             .font(.title2)
+                            .foregroundColor(.white)
+                            .scaleEffect(isAnimating ? 0.95 : 1.05)
+                            .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: isAnimating)
                         Text("I'm a Grown-up")
                             .font(.title3)
-                            .fontWeight(.semibold)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .scaleEffect(isAnimating ? 0.98 : 1.02)
+                            .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true), value: isAnimating)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(themeColor.opacity(0.2))
-                    .cornerRadius(16)
+                    .padding(.vertical, 18)
                 }
-                .buttonStyle(PlainButtonStyle())
+                .buttonStyle(ChildFriendlyButtonStyle())
                 
                 Button(action: {
-                    withAnimation {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0.2)) {
                         selectedRole = .child
-                        // For child, go directly to PIN login
-                        authService.authState = .none // Reset to show child login
+                        authService.authState = .none
                     }
                 }) {
                     HStack {
                         Image(systemName: "person")
                             .font(.title2)
+                            .foregroundColor(.white)
+                            .scaleEffect(isAnimating ? 0.95 : 1.05)
+                            .animation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true), value: isAnimating)
                         Text("I'm a Kid")
                             .font(.title3)
-                            .fontWeight(.semibold)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .scaleEffect(isAnimating ? 0.98 : 1.02)
+                            .animation(.easeInOut(duration: 2.7).repeatForever(autoreverses: true), value: isAnimating)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(themeColor.opacity(0.2))
-                    .cornerRadius(16)
+                    .padding(.vertical, 18)
                 }
-                .buttonStyle(PlainButtonStyle())
+                .buttonStyle(ChildFriendlyButtonStyle())
                 
                 // Sign In option for parents - moved below both buttons
                 HStack {
@@ -268,6 +339,24 @@ extension Color {
 extension View {
     func themeColor() -> Color {
         Color(hex: "#a2cee3")
+    }
+}
+
+// MARK: - Child-Friendly Button Style
+struct ChildFriendlyButtonStyle: ButtonStyle {
+    let themeColor = Color(hex: "#a2cee3")
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0.2), value: configuration.isPressed)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(themeColor)
+                    .shadow(color: themeColor.opacity(0.3), radius: configuration.isPressed ? 4 : 8, x: 0, y: configuration.isPressed ? 2 : 4)
+                    .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0.2), value: configuration.isPressed)
+            )
     }
 }
 
