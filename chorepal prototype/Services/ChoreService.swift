@@ -51,6 +51,19 @@ class ChoreService: ObservableObject {
         // Save to Firestore
         Task {
             await saveChoreToFirestore(chore)
+            
+            // Send notification to assigned child if chore is assigned
+            if let childId = chore.assignedToChildId {
+                let notificationService = NotificationService()
+                await notificationService.createNotification(
+                    userId: childId,
+                    type: .taskCreated,
+                    title: "New Task Assigned! 📋",
+                    message: "You have a new task: \"\(chore.title)\" worth \(chore.points) points",
+                    choreId: chore.id
+                )
+                print("✅ Notification sent to child \(childId) for new chore: \(chore.title)")
+            }
         }
     }
     

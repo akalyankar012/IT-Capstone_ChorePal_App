@@ -86,6 +86,24 @@ class RewardService: ObservableObject {
         if let index = rewards.firstIndex(where: { $0.id == reward.id }) {
             rewards[index].purchasedAt = Date()
             rewards[index].purchasedByChildId = childId
+            
+            // Save reward update to Firestore and notify parent
+            Task {
+                await updateRewardInFirestore(rewards[index])
+                
+                // Send notification to parent about reward purchase
+                if let parentId = authService.currentParent?.id {
+                    let notificationService = NotificationService()
+                    await notificationService.createNotification(
+                        userId: parentId,
+                        type: .rewardRedeemed,
+                        title: "Reward Purchased! 🎁",
+                        message: "\(child.name) purchased \"\(reward.name)\" for \(reward.points) points",
+                        choreId: nil
+                    )
+                    print("✅ Notification sent to parent \(parentId) for reward purchase: \(reward.name)")
+                }
+            }
         }
         
         return true
@@ -107,6 +125,19 @@ class RewardService: ObservableObject {
             // Save reward update to Firestore
             Task {
                 await updateRewardInFirestore(rewards[index])
+                
+                // Send notification to parent about reward redemption
+                if let parentId = authService.currentParent?.id {
+                    let notificationService = NotificationService()
+                    await notificationService.createNotification(
+                        userId: parentId,
+                        type: .rewardRedeemed,
+                        title: "Reward Redeemed! 🎁",
+                        message: "\(child.name) redeemed \"\(reward.name)\" for \(reward.points) points",
+                        choreId: nil
+                    )
+                    print("✅ Notification sent to parent \(parentId) for reward redemption: \(reward.name)")
+                }
             }
         }
         
