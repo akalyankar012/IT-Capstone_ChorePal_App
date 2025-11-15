@@ -88,80 +88,64 @@ struct ParentDashboardView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header with gradient background
-                VStack(spacing: 16) {
-                    HStack {
-                        HStack(spacing: 12) {
-                            AvatarView(avatarName: AvatarStore.getParentAvatarName() ?? "boy", size: 44, themeColor: themeColor)
-                            VStack(alignment: .leading, spacing: 4) {
-                            Text("Welcome back, \(authService.currentParent?.phoneNumber ?? "Parent")!")
-                                .font(.title2)
-                                .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
-                            
-                            Text("Family Dashboard")
-                                .font(.system(size: 32, weight: .heavy))
-                                .foregroundColor(themeColor)
-                                .shadow(color: themeColor.opacity(0.3), radius: 2, x: 0, y: 1)
-                            }
-                        }
+                // Fixed Welcome Section (above nav bar)
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Welcome back")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
                         
-                        Spacer()
-                        
-                        // Photo Approval Button
-                        Button(action: {
-                            showingPhotoApprovals = true
-                        }) {
-                            ZStack {
-                                Image(systemName: "photo.badge.checkmark")
-                                    .font(.title2)
-                                    .foregroundColor(themeColor)
-                                
-                                // Badge for pending photos
-                                if !photoApprovalService.pendingPhotos.isEmpty {
-                                    Text("\(photoApprovalService.pendingPhotos.count)")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundColor(.white)
-                                        .frame(width: 16, height: 16)
-                                        .background(
-                                            Circle()
-                                                .fill(Color.red)
-                                        )
-                                        .offset(x: 8, y: -8)
-                                }
-                            }
-                            .padding()
-                        }
-                        
-                        Button(action: {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                selectedTheme = selectedTheme == .light ? .dark : .light
-                                isAnimating.toggle()
-                            }
-                        }) {
-                            Image(systemName: selectedTheme.icon)
-                                .font(.title2)
-                                .foregroundColor(selectedTheme == .light ? Color(hex: "#a2cee3") : Color(hex: "#3b82f6"))
-                                .padding()
-                                .rotationEffect(.degrees(isAnimating ? 360 : 0))
-                                .scaleEffect(isAnimating ? 1.1 : 1.0)
-                        }
+                        Text("Family Dashboard")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(themeColor)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
+                    
+                    Spacer()
+                    
+                    // Photo Approval Button
+                    Button(action: {
+                        showingPhotoApprovals = true
+                    }) {
+                        ZStack {
+                            Image(systemName: "photo.badge.checkmark")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(themeColor)
+                            
+                            // Badge for pending photos
+                            if !photoApprovalService.pendingPhotos.isEmpty {
+                                Text("\(photoApprovalService.pendingPhotos.count)")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 14, height: 14)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.red)
+                                    )
+                                    .offset(x: 7, y: -7)
+                            }
+                        }
+                        .frame(width: 36, height: 36)
+                    }
+                    
+                    Button(action: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            selectedTheme = selectedTheme == .light ? .dark : .light
+                            isAnimating.toggle()
+                        }
+                    }) {
+                        Image(systemName: selectedTheme.icon)
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(selectedTheme == .light ? Color(hex: "#a2cee3") : Color(hex: "#3b82f6"))
+                            .frame(width: 36, height: 36)
+                            .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                    }
                 }
-                .padding(.bottom, 16)
-                .background(
-                    LinearGradient(
-                        colors: [
-                            themeColor.opacity(0.08),
-                            Color.clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .background(Color(.systemBackground))
                 
-                // Tab Selector
+                // Fixed Navigation Bar (always visible)
                 HStack(spacing: 0) {
                     TabButton(
                         title: localizationService.localizedString(for: "overview"),
@@ -185,35 +169,58 @@ struct ParentDashboardView: View {
                     )
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 16)
+                .padding(.vertical, 10)
+                .background(
+                    Color(.systemBackground)
+                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                )
                 
                 // Tab Content
-                TabView(selection: $selectedTab) {
-                    ParentOverviewView(
-                        authService: authService,
-                        choreService: choreService,
-                        showingAddChild: $showingAddChild,
-                        selectedChild: $selectedChild,
-                        showingChildDetails: $showingChildDetails
-                    )
-                    .tag(0)
-                    
-                    ParentCalendarView(
-                        choreService: choreService,
-                        authService: authService,
-                        photoApprovalService: photoApprovalService
-                    )
-                    .tag(1)
-                    
-                    ParentSettingsView(
-                        selectedTheme: $selectedTheme,
-                        authService: authService,
-                        isAnimating: $isAnimating
-                    )
-                    .tag(2)
+                Group {
+                    switch selectedTab {
+                    case 0:
+                        ParentOverviewView(
+                            authService: authService,
+                            choreService: choreService,
+                            showingAddChild: $showingAddChild,
+                            selectedChild: $selectedChild,
+                            showingChildDetails: $showingChildDetails,
+                            showingPhotoApprovals: $showingPhotoApprovals,
+                            photoApprovalService: photoApprovalService,
+                            selectedTheme: $selectedTheme,
+                            isAnimating: $isAnimating
+                        )
+                    case 1:
+                        ParentCalendarView(
+                            choreService: choreService,
+                            authService: authService,
+                            photoApprovalService: photoApprovalService,
+                            showingPhotoApprovals: $showingPhotoApprovals,
+                            selectedTheme: $selectedTheme,
+                            isAnimating: $isAnimating
+                        )
+                    case 2:
+                        ParentSettingsView(
+                            selectedTheme: $selectedTheme,
+                            authService: authService,
+                            isAnimating: $isAnimating,
+                            showingPhotoApprovals: $showingPhotoApprovals,
+                            photoApprovalService: photoApprovalService
+                        )
+                    default:
+                        ParentOverviewView(
+                            authService: authService,
+                            choreService: choreService,
+                            showingAddChild: $showingAddChild,
+                            selectedChild: $selectedChild,
+                            showingChildDetails: $showingChildDetails,
+                            showingPhotoApprovals: $showingPhotoApprovals,
+                            photoApprovalService: photoApprovalService,
+                            selectedTheme: $selectedTheme,
+                            isAnimating: $isAnimating
+                        )
+                    }
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
             .background(Color(.systemGroupedBackground))
             .navigationBarHidden(true)
@@ -1002,6 +1009,7 @@ struct ChildDetailsView: View {
     }
 } 
 
+
 // MARK: - Parent Overview View
 struct ParentOverviewView: View {
     @ObservedObject var authService: AuthService
@@ -1009,13 +1017,17 @@ struct ParentOverviewView: View {
     @Binding var showingAddChild: Bool
     @Binding var selectedChild: Child?
     @Binding var showingChildDetails: Bool
+    @Binding var showingPhotoApprovals: Bool
+    @ObservedObject var photoApprovalService: PhotoApprovalService
+    @Binding var selectedTheme: AppTheme
+    @Binding var isAnimating: Bool
     
     private let themeColor = Color(hex: "#a2cee3")
     
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Quick Actions Section (moved to top)
+                // Quick Actions Section
                 QuickActionsSection(choreService: choreService, authService: authService)
                     .padding(.top, 12)
                 
@@ -1048,6 +1060,9 @@ struct ParentCalendarView: View {
     @ObservedObject var choreService: ChoreService
     @ObservedObject var authService: AuthService
     @ObservedObject var photoApprovalService: PhotoApprovalService
+    @Binding var showingPhotoApprovals: Bool
+    @Binding var selectedTheme: AppTheme
+    @Binding var isAnimating: Bool
     @State private var selectedChore: Chore?
     @State private var currentMonth = Date()
     
@@ -1243,6 +1258,8 @@ struct ParentSettingsView: View {
     @Binding var selectedTheme: AppTheme
     @ObservedObject var authService: AuthService
     @Binding var isAnimating: Bool
+    @Binding var showingPhotoApprovals: Bool
+    @ObservedObject var photoApprovalService: PhotoApprovalService
     
     private let themeColor = Color(hex: "#a2cee3")
     
