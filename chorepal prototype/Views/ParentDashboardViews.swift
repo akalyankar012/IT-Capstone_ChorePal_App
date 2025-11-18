@@ -683,8 +683,11 @@ struct AddChildView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var childName = ""
     @State private var selectedAvatar = ChildAvatar.boy
-    @State private var showingAlert = false
-    @State private var alertMessage = ""
+    @State private var showingSuccessModal = false
+    @State private var generatedPin = ""
+    @State private var createdChildName = ""
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -805,14 +808,22 @@ struct AddChildView: View {
             }
             .navigationBarHidden(true)
         }
-        .alert("Add Child", isPresented: $showingAlert) {
-            Button("OK") {
-                if alertMessage.contains("successfully") {
-                    dismiss()
-                }
+        .overlay {
+            if showingSuccessModal {
+                ChildCreatedSuccessModal(
+                    childName: createdChildName,
+                    pin: generatedPin,
+                    isPresented: $showingSuccessModal,
+                    onDismiss: {
+                        dismiss()
+                    }
+                )
             }
+        }
+        .alert("Error", isPresented: $showingErrorAlert) {
+            Button("OK") { }
         } message: {
-            Text(alertMessage)
+            Text(errorMessage)
         }
     }
     
@@ -824,16 +835,17 @@ struct AddChildView: View {
         let trimmedName = childName.trimmingCharacters(in: .whitespacesAndNewlines)
         
         Task {
-            let generatedPin = await authService.addChild(name: trimmedName, avatar: selectedAvatar.rawValue)
+            let pin = await authService.addChild(name: trimmedName, avatar: selectedAvatar.rawValue)
             
-            if !generatedPin.isEmpty {
-                alertMessage = "Child '\(trimmedName)' added successfully!\n\nLogin PIN: \(generatedPin)\n\nPlease save this PIN - it will be needed for the child to log in."
-                showingAlert = true
+            if !pin.isEmpty {
+                createdChildName = trimmedName
+                generatedPin = pin
                 childName = ""
                 selectedAvatar = .boy // Reset to default
+                showingSuccessModal = true
             } else {
-                alertMessage = authService.errorMessage ?? "Failed to add child"
-                showingAlert = true
+                errorMessage = authService.errorMessage ?? "Failed to add child"
+                showingErrorAlert = true
             }
         }
     }
@@ -1661,4 +1673,156 @@ struct TabButton: View {
         }
         .buttonStyle(.plain)
     }
-} 
+}
+
+// MARK: - Child Created Success Modal
+struct ChildCreatedSuccessModal: View {
+    let childName: String
+    let pin: String
+    @Binding var isPresented: Bool
+    let onDismiss: () -> Void
+    
+    @State private var showContent = false
+    @State private var animateCheckmark = false
+    
+    private let themeColor = Color(hex: "#a2cee3")
+    
+    var body: some View {
+        ZStack {
+            // Semi-transparent background
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    dismissModal()
+                }
+            
+            // Modal content
+            VStack(spacing: 0) {
+                // Success icon with animation
+                ZStack {
+                    Circle()
+                        .fill(themeColor.opacity(0.15))
+                        .frame(width: 100, height: 100)
+                    
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(themeColor)
+                        .scaleEffect(animateCheckmark ? 1.0 : 0.5)
+                        .opacity(animateCheckmark ? 1.0 : 0.0)
+                }
+                .padding(.top, 32)
+                .padding(.bottom, 20)
+                
+                // Title
+                Text("Child Added Successfully!")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.primary)
+                    .padding(.bottom, 8)
+                    .opacity(showContent ? 1.0 : 0.0)
+                    .offset(y: showContent ? 0 : 10)
+                
+                // Child name
+                Text(childName)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(themeColor)
+                    .padding(.bottom, 24)
+                    .opacity(showContent ? 1.0 : 0.0)
+                    .offset(y: showContent ? 0 : 10)
+                
+                // PIN section
+                VStack(spacing: 12) {
+                    Text("Login PIN")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                    
+                    // PIN display with copy button
+                    HStack(spacing: 16) {
+                        Text(pin)
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .foregroundColor(themeColor)
+                            .tracking(8)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(themeColor.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(themeColor.opacity(0.3), lineWidth: 2)
+                                    )
+                            )
+                        
+                        Button(action: copyPIN) {
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(themeColor)
+                                .padding(12)
+                                .background(themeColor.opacity(0.1))
+                                .clipShape(Circle())
+                        }
+                    }
+                    
+                    Text("Save this PIN - it's needed for login")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 32)
+                .opacity(showContent ? 1.0 : 0.0)
+                .offset(y: showContent ? 0 : 10)
+                
+                // Action button
+                Button(action: dismissModal) {
+                    Text("Done")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(themeColor)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
+                .opacity(showContent ? 1.0 : 0.0)
+                .offset(y: showContent ? 0 : 20)
+            }
+            .frame(maxWidth: 340)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
+            )
+            .scaleEffect(showContent ? 1.0 : 0.9)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                animateCheckmark = true
+            }
+            
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {
+                showContent = true
+            }
+        }
+    }
+    
+    private func dismissModal() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            showContent = false
+            animateCheckmark = false
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            isPresented = false
+            onDismiss()
+        }
+    }
+    
+    private func copyPIN() {
+        UIPasteboard.general.string = pin
+        
+        // Haptic feedback
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+    }
+}
