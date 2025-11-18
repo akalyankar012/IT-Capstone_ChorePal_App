@@ -170,10 +170,10 @@ struct ChildDashboardView: View {
             VStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.6)))
+                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.9)))
                 Text(title)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.6)))
+                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.9)))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
@@ -191,7 +191,7 @@ struct ChildDashboardView: View {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: icon)
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.6)))
+                        .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.9)))
                     
                     if badgeCount > 0 {
                         Circle()
@@ -207,7 +207,7 @@ struct ChildDashboardView: View {
                 }
                 Text(title)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.6)))
+                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.9)))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
@@ -247,15 +247,15 @@ struct ChildChoresLiteView: View {
                                     .foregroundColor(selectedTheme == .light ? .primary : .white)
                                 Text(chore.description)
                                     .font(.caption)
-                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
+                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.88))
                                     .lineLimit(2)
                                 HStack(spacing: 10) {
                                     Label("\(chore.points) pts", systemImage: "star.fill")
                                         .font(.caption)
-                                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.6))
+                                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.82))
                                     Label(chore.dueDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
                                         .font(.caption)
-                                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.6))
+                                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.82))
                                 }
                             }
                             Spacer()
@@ -264,9 +264,7 @@ struct ChildChoresLiteView: View {
                             choreActionButton(for: chore)
                         }
                         .padding(12)
-                        .background(Color(.systemBackground).opacity(selectedTheme == .light ? 0.9 : 0.2))
-                        .cornerRadius(12)
-                        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                        .glassCard(isLightMode: selectedTheme == .light, themeColor: themeColor)
                     }
                     Spacer(minLength: 80)
                 }
@@ -448,11 +446,11 @@ struct ChildRewardsLiteView: View {
                                 Text("No rewards yet!")
                                     .font(.title3)
                                     .fontWeight(.semibold)
-                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
+                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.9))
                                 Text("Complete chores to earn points and redeem rewards")
                                     .font(.caption)
                                     .multilineTextAlignment(.center)
-                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.6))
+                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.8))
                                     .padding(.horizontal, 40)
                             }
                             .frame(maxWidth: .infinity)
@@ -488,7 +486,7 @@ struct ChildRewardsLiteView: View {
         Button(action: { withAnimation { selectedRewardTab = id } }) {
             Text(title)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(selectedRewardTab == id ? themeColor : (selectedTheme == .light ? .gray : Color.white.opacity(0.6)))
+                .foregroundColor(selectedRewardTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.9)))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .background(

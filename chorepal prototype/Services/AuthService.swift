@@ -58,8 +58,8 @@ class AuthService: ObservableObject {
         parents.append(sampleParent)
         
         // Add sample children with known PINs
-        let sampleChild1 = Child(name: "Emma", pin: "1234", parentId: sampleParent.id)
-        let sampleChild2 = Child(name: "Liam", pin: "5678", parentId: sampleParent.id)
+        let sampleChild1 = Child(name: "Emma", pin: "1234", parentId: sampleParent.id, avatar: "girl")
+        let sampleChild2 = Child(name: "Liam", pin: "5678", parentId: sampleParent.id, avatar: "boy")
         
         children.append(sampleChild1)
         children.append(sampleChild2)
@@ -326,6 +326,8 @@ class AuthService: ObservableObject {
                 "pin": child.pin,
                 "parentId": currentUser.uid, // Use Firebase Auth UID instead of UUID
                 "points": child.points,
+                "totalPointsEarned": child.totalPointsEarned,
+                "avatar": child.avatar,
                 "createdAt": FieldValue.serverTimestamp()
             ]
             
@@ -564,7 +566,7 @@ class AuthService: ObservableObject {
         }
     }
     
-    func addChild(name: String) async -> String {
+    func addChild(name: String, avatar: String = "boy") async -> String {
         await MainActor.run {
             isLoading = true
             errorMessage = nil
@@ -585,7 +587,7 @@ class AuthService: ObservableObject {
             return ""
         }
         
-        let newChild = Child(name: name, pin: pin, parentId: parent.id)
+        let newChild = Child(name: name, pin: pin, parentId: parent.id, avatar: avatar)
         
         await MainActor.run {
             children.append(newChild)
@@ -595,6 +597,9 @@ class AuthService: ObservableObject {
         
         // Save child to Firestore
         await saveChildToFirestore(newChild)
+        
+        // Save avatar to local store for quick access
+        AvatarStore.setChildAvatarName(avatar, for: newChild.id)
         
         return pin
     }
@@ -643,9 +648,13 @@ class AuthService: ObservableObject {
             // Create child object from Firestore data
             let childId = UUID(uuidString: document.documentID) ?? UUID()
             let parentId = UUID(uuidString: parentIdString) ?? UUID()
-            var child = Child(id: childId, name: name, pin: childPin, parentId: parentId)
+            let avatar = data["avatar"] as? String ?? "boy"
+            var child = Child(id: childId, name: name, pin: childPin, parentId: parentId, avatar: avatar)
             child.points = data["points"] as? Int ?? 0
             child.totalPointsEarned = data["totalPointsEarned"] as? Int ?? 0
+            
+            // Save avatar to local store for quick access
+            AvatarStore.setChildAvatarName(avatar, for: childId)
             
             print("✅ Child found: \(name) with PIN: \(childPin)")
             print("📊 Child points: \(child.points), Total earned: \(child.totalPointsEarned)")
@@ -794,10 +803,14 @@ class AuthService: ObservableObject {
                            let parentIdString = data["parentId"] as? String {
                             
                             let childId = UUID(uuidString: document.documentID) ?? UUID()
-                            var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
+                            let avatar = data["avatar"] as? String ?? "boy"
+                            var child = Child(id: childId, name: name, pin: pin, parentId: parentId, avatar: avatar)
                             child.points = data["points"] as? Int ?? 0
                             child.totalPointsEarned = data["totalPointsEarned"] as? Int ?? 0
-                            print("🔍 Loading child from Firestore: \(name) - Points: \(child.points), Total Earned: \(child.totalPointsEarned)")
+                            print("🔍 Loading child from Firestore: \(name) - Points: \(child.points), Total Earned: \(child.totalPointsEarned), Avatar: \(avatar)")
+                            
+                            // Save avatar to local store for quick access
+                            AvatarStore.setChildAvatarName(avatar, for: childId)
                             
                             loadedChildren.append(child)
                             print("Loaded child: \(name) with PIN: \(pin)")
@@ -825,8 +838,8 @@ class AuthService: ObservableObject {
         parent.isVerified = true
         
         // Add sample children
-        let sampleChild1 = Child(name: "Emma", pin: "1234", parentId: parent.id)
-        let sampleChild2 = Child(name: "Liam", pin: "5678", parentId: parent.id)
+        let sampleChild1 = Child(name: "Emma", pin: "1234", parentId: parent.id, avatar: "girl")
+        let sampleChild2 = Child(name: "Liam", pin: "5678", parentId: parent.id, avatar: "boy")
         parent.children = [sampleChild1, sampleChild2]
         
         // Update local arrays
@@ -871,10 +884,14 @@ class AuthService: ObservableObject {
             }
             
             let childId = UUID(uuidString: document.documentID) ?? UUID()
-            var child = Child(id: childId, name: name, pin: pin, parentId: parentId)
+            let avatar = data["avatar"] as? String ?? "boy"
+            var child = Child(id: childId, name: name, pin: pin, parentId: parentId, avatar: avatar)
             child.points = data["points"] as? Int ?? 0
             child.totalPointsEarned = data["totalPointsEarned"] as? Int ?? 0
-            print("🔍 Loading child from document: \(name) - Points: \(child.points), Total Earned: \(child.totalPointsEarned)")
+            print("🔍 Loading child from document: \(name) - Points: \(child.points), Total Earned: \(child.totalPointsEarned), Avatar: \(avatar)")
+            
+            // Save avatar to local store for quick access
+            AvatarStore.setChildAvatarName(avatar, for: childId)
             
             print("✅ Child data loaded successfully: \(name) with PIN: \(pin)")
             print("🔧 Setting currentChild and authState to .authenticated")
@@ -918,9 +935,13 @@ class AuthService: ObservableObject {
                            let parentIdString = data["parentId"] as? String {
                             
                             let childId = UUID(uuidString: document.documentID) ?? UUID()
-                            var child = Child(id: childId, name: name, pin: pin, parentId: UUID(uuidString: parentIdString) ?? UUID())
+                            let avatar = data["avatar"] as? String ?? "boy"
+                            var child = Child(id: childId, name: name, pin: pin, parentId: UUID(uuidString: parentIdString) ?? UUID(), avatar: avatar)
                             child.points = data["points"] as? Int ?? 0
                             child.totalPointsEarned = data["totalPointsEarned"] as? Int ?? 0
+                            
+                            // Save avatar to local store for quick access
+                            AvatarStore.setChildAvatarName(avatar, for: childId)
                             
                             loadedChildren.append(child)
                         }

@@ -35,20 +35,23 @@ struct Child: Identifiable, Codable {
     var parentId: UUID
     var points: Int = 0
     var totalPointsEarned: Int = 0 // Track total points earned from chores
+    var avatar: String = "boy" // Avatar selection (boy/girl)
     var createdAt: Date = Date()
     
-    init(name: String, pin: String, parentId: UUID) {
+    init(name: String, pin: String, parentId: UUID, avatar: String = "boy") {
         self.id = UUID()
         self.name = name
         self.pin = pin
         self.parentId = parentId
+        self.avatar = avatar
     }
     
-    init(id: UUID, name: String, pin: String, parentId: UUID) {
+    init(id: UUID, name: String, pin: String, parentId: UUID, avatar: String = "boy") {
         self.id = id
         self.name = name
         self.pin = pin
         self.parentId = parentId
+        self.avatar = avatar
     }
 }
 

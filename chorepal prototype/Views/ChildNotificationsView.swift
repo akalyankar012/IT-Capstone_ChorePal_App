@@ -5,6 +5,7 @@ struct ChildNotificationsView: View {
     @StateObject private var notificationService = NotificationService()
     @State private var showDeleteAlert = false
     @State private var notificationToDelete: AppNotification?
+    @AppStorage("selectedTheme") private var selectedTheme: AppTheme = .light
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -36,6 +37,8 @@ struct ChildNotificationsView: View {
                         ForEach(notificationService.notifications) { notification in
                             NotificationCard(
                                 notification: notification,
+                                selectedTheme: selectedTheme,
+                                themeColor: themeColor,
                                 onTap: {
                                     Task {
                                         await notificationService.markAsRead(notificationId: notification.id)
@@ -76,6 +79,8 @@ struct ChildNotificationsView: View {
 // MARK: - Notification Card
 struct NotificationCard: View {
     let notification: AppNotification
+    let selectedTheme: AppTheme
+    let themeColor: Color
     let onTap: () -> Void
     let onDelete: () -> Void
     
@@ -121,13 +126,10 @@ struct NotificationCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(12)
-            .background(
+            .glassCard(isLightMode: selectedTheme == .light, themeColor: themeColor)
+            .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(notification.isRead ? Color(.systemGray6).opacity(0.5) : Color(.systemGray6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(notification.isRead ? Color.clear : Color.blue.opacity(0.3), lineWidth: 1)
-                    )
+                    .stroke(notification.isRead ? Color.clear : themeColor.opacity(0.2), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

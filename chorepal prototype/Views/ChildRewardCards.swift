@@ -31,7 +31,7 @@ struct ChildRewardCard: View {
                 if !reward.description.isEmpty {
                     Text(reward.description)
                         .font(.caption)
-                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
+                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.85))
                         .lineLimit(2)
                 }
                 
@@ -85,15 +85,11 @@ struct ChildRewardCard: View {
             .disabled(!canAfford)
         }
         .padding(14)
-        .background(
+        .glassCard(isLightMode: selectedTheme == .light, themeColor: themeColor)
+        .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground).opacity(selectedTheme == .light ? 0.9 : 0.2))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(canAfford ? themeColor.opacity(0.3) : Color.clear, lineWidth: 2)
-                )
+                .stroke(canAfford ? themeColor.opacity(0.25) : Color.clear, lineWidth: 1.5)
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
         .opacity(canAfford ? 1.0 : 0.7)
     }
 }
@@ -129,7 +125,7 @@ struct RedeemedRewardCard: View {
                 if !reward.description.isEmpty {
                     Text(reward.description)
                         .font(.caption)
-                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
+                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.85))
                         .lineLimit(2)
                 }
                 
@@ -146,13 +142,13 @@ struct RedeemedRewardCard: View {
                     }
                     
                     Text("•")
-                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.5))
+                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
                     
                     // Redeemed date
                     if let purchasedAt = reward.purchasedAt {
                         Text("Redeemed \(purchasedAt, style: .date)")
                             .font(.caption2)
-                            .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.6))
+                            .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.8))
                     }
                 }
             }
@@ -167,15 +163,7 @@ struct RedeemedRewardCard: View {
             }
         }
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground).opacity(selectedTheme == .light ? 0.9 : 0.2))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(themeColor.opacity(0.2), lineWidth: 1)
-                )
-        )
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .glassCard(isLightMode: selectedTheme == .light, themeColor: themeColor)
     }
 }
 

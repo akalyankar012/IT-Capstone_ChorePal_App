@@ -75,13 +75,13 @@ struct BackgroundChoresAnimation: View {
     
     var body: some View {
         ZStack {
-            ForEach(0..<40, id: \.self) { index in
+            ForEach(0..<28, id: \.self) { index in
                 ChoreIconParticle(
                     iconName: icons[index % icons.count],
                     delay: Double(index) * 0.1
                 )
             }
-            ForEach(0..<15, id: \.self) { index in
+            ForEach(0..<10, id: \.self) { index in
                 FloatingElement(
                     index: index,
                     delay: Double(index) * 0.3
@@ -97,7 +97,7 @@ struct FloatingElement: View {
     let delay: Double
     @State private var offset: CGSize = .zero
     @State private var rotation: Double = 0
-    @State private var opacity: Double = 0.3
+    @State private var opacity: Double = 0.25
     
     private let shapes = ["circle.fill", "square.fill", "triangle.fill", "diamond.fill", "hexagon.fill"]
     private let colors: [Color] = [.blue, .green, .orange, .purple, .red, .pink, .yellow]
@@ -105,7 +105,7 @@ struct FloatingElement: View {
     var body: some View {
         Image(systemName: shapes.randomElement() ?? "circle.fill")
             .font(.system(size: CGFloat.random(in: 8...18), weight: .bold))
-            .foregroundColor(colors.randomElement()?.opacity(0.45) ?? .blue.opacity(0.45))
+            .foregroundColor(colors.randomElement()?.opacity(0.35) ?? .blue.opacity(0.35))
             .opacity(opacity)
             .rotationEffect(.degrees(rotation))
             .offset(offset)
@@ -128,7 +128,7 @@ struct FloatingElement: View {
             rotation = 360
         }
         withAnimation(.easeInOut(duration: Double.random(in: 12...20)).repeatForever(autoreverses: true).delay(delay)) {
-            opacity = Double.random(in: 0.2...0.35)
+            opacity = Double.random(in: 0.15...0.25)
         }
     }
 }
@@ -136,7 +136,7 @@ struct FloatingElement: View {
 struct ChoreIconParticle: View {
     @State private var offset: CGSize = .zero
     @State private var rotation: Double = 0
-    @State private var opacity: Double = 0.9
+    @State private var opacity: Double = 0.55
     @State private var scale: CGFloat = 1.0
     @State private var bounceDirection: CGSize = .zero
     let iconName: String
@@ -145,11 +145,12 @@ struct ChoreIconParticle: View {
     var body: some View {
         Image(systemName: iconName)
             .font(.system(size: CGFloat.random(in: 22...36), weight: .bold))
-            .foregroundColor([Color.blue, Color.green, Color.orange, Color.purple, Color.red].randomElement()?.opacity(0.9) ?? .blue.opacity(0.9))
+            .foregroundColor([Color.blue, Color.green, Color.orange, Color.purple, Color.red].randomElement()?.opacity(0.65) ?? .blue.opacity(0.65))
             .opacity(opacity)
             .rotationEffect(.degrees(rotation))
             .scaleEffect(scale)
             .offset(offset)
+            .blendMode(.plusLighter)
             .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
             .onAppear {
                 startBouncingAnimation()
@@ -169,8 +170,8 @@ struct ChoreIconParticle: View {
         withAnimation(.linear(duration: Double.random(in: 3...6)).repeatForever(autoreverses: false).delay(delay)) {
             rotation = 360
         }
-        withAnimation(.easeInOut(duration: Double.random(in: 2.5...4.5)).repeatForever(autoreverses: true).delay(delay)) {
-            opacity = Double.random(in: 0.6...1.0)
+        withAnimation(.easeInOut(duration: Double.random(in: 3.0...5.0)).repeatForever(autoreverses: true).delay(delay)) {
+            opacity = Double.random(in: 0.35...0.6)
         }
     }
     

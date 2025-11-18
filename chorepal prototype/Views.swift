@@ -555,6 +555,9 @@ struct CalendarView: View {
                             }
                         }
                         .background(selectedChore?.id == chores[index].id ? themeColor.opacity(0.1) : Color.clear)
+                        .applyIf(role == .child) { view in
+                            view.glassCard(isLightMode: selectedTheme == .light, themeColor: themeColor)
+                        }
                         
                         if index < chores.count - 1 {
                             Divider()

@@ -5,6 +5,7 @@ struct ParentNotificationsView: View {
     @StateObject private var notificationService = NotificationService()
     @State private var showDeleteAlert = false
     @State private var notificationToDelete: AppNotification?
+    @AppStorage("selectedTheme") private var selectedTheme: AppTheme = .light
     
     private let themeColor = Color(hex: "#a2cee3")
     
@@ -37,6 +38,8 @@ struct ParentNotificationsView: View {
                             ForEach(notificationService.notifications) { notification in
                                 NotificationCard(
                                     notification: notification,
+                                    selectedTheme: selectedTheme,
+                                    themeColor: themeColor,
                                     onTap: {
                                         Task {
                                             await notificationService.markAsRead(notificationId: notification.id)

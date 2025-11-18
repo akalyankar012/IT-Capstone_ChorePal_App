@@ -141,7 +141,7 @@ struct ParentDashboardView: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 12)
+                .padding(.top, 8)
                 .padding(.bottom, 8)
                 .background(Color(.systemBackground))
                 
@@ -224,6 +224,9 @@ struct ParentDashboardView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationBarHidden(true)
+            .navigationBarTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
         }
         .preferredColorScheme(selectedTheme == .light ? .light : .dark)
         .fullScreenCover(isPresented: $showingAddChild) {
@@ -238,12 +241,6 @@ struct ParentDashboardView: View {
                 choreService: choreService,
                 authService: authService
             )
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { showingAddChild = true }) { EmptyView() }
-                    .hidden()
-            }
         }
         .onAppear {
             // Start listening for pending photos when parent dashboard appears
@@ -428,22 +425,12 @@ struct ChildRowView: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 14) {
-                // Child Avatar with gradient overlay
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [themeColor.opacity(0.3), themeColor.opacity(0.15)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 56, height: 56)
-                    
-                    Text(String(child.name.prefix(1)).uppercased())
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(themeColor)
-                }
+                // Child Avatar
+                AvatarView(
+                    avatarName: child.avatar,
+                    size: 56,
+                    themeColor: themeColor
+                )
                 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(child.name)
@@ -840,13 +827,14 @@ struct AddChildView: View {
         let trimmedName = childName.trimmingCharacters(in: .whitespacesAndNewlines)
         
         Task {
-            let generatedPin = await authService.addChild(name: trimmedName)
+            let generatedPin = await authService.addChild(name: trimmedName, avatar: selectedAvatar.rawValue)
             
             if !generatedPin.isEmpty {
                 alertMessage = "Child '\(trimmedName)' added successfully with PIN: \(generatedPin)"
                 showingAlert = true
                 childName = ""
                 customPIN = ""
+                selectedAvatar = .boy // Reset to default
             } else {
                 alertMessage = authService.errorMessage ?? "Failed to add child"
                 showingAlert = true
@@ -871,14 +859,11 @@ struct ChildDetailsView: View {
                 VStack(spacing: 24) {
                     // Child Avatar and Info
                     VStack(spacing: 16) {
-                        Circle()
-                            .fill(themeColor.opacity(0.2))
-                            .frame(width: 100, height: 100)
-                            .overlay(
-                                Text(String(child.name.prefix(1)).uppercased())
-                                    .font(.system(size: 40, weight: .bold))
-                                    .foregroundColor(themeColor)
-                            )
+                        AvatarView(
+                            avatarName: child.avatar,
+                            size: 100,
+                            themeColor: themeColor
+                        )
                         
                         VStack(spacing: 8) {
                             Text(child.name)
@@ -1268,7 +1253,9 @@ struct ParentSettingsView: View {
             VStack(spacing: 20) {
                 // Profile Section
                 VStack(spacing: 16) {
-                    AvatarView(avatarName: AvatarStore.getParentAvatarName() ?? "boy", size: 80, themeColor: themeColor)
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(themeColor)
                     
                     Text("Family Account")
                         .font(.title2)
@@ -1282,38 +1269,6 @@ struct ParentSettingsView: View {
                 
                 // Settings List
                 VStack(spacing: 0) {
-                    // Avatar selection
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("Choose Avatar")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 12)
-                        
-                        HStack(spacing: 20) {
-                            ForEach(ChildAvatar.allCases, id: \.self) { avatar in
-                                Button(action: { AvatarStore.setParentAvatarName(avatar.rawValue) }) {
-                                    VStack(spacing: 8) {
-                                        AvatarView(avatarName: avatar.rawValue, size: 64, themeColor: themeColor)
-                                        Text(avatar.displayName)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 12)
-                        .background(Color(.systemBackground))
-                    }
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
 
                     // Language Section
                     VStack(spacing: 0) {
