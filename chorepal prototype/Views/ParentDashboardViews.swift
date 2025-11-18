@@ -682,7 +682,6 @@ struct AddChildView: View {
     @ObservedObject var authService: AuthService
     @Environment(\.dismiss) private var dismiss
     @State private var childName = ""
-    @State private var customPIN = ""
     @State private var selectedAvatar = ChildAvatar.boy
     @State private var showingAlert = false
     @State private var alertMessage = ""
@@ -702,7 +701,7 @@ struct AddChildView: View {
                         .font(.title)
                         .fontWeight(.bold)
                     
-                    Text("Create a new child account with a unique PIN")
+                    Text("A unique 4-digit PIN will be generated automatically")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
@@ -756,20 +755,20 @@ struct AddChildView: View {
                             .autocapitalization(.words)
                     }
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Login PIN")
-                            .font(.headline)
-                            .foregroundColor(.primary)
+                    // Info about automatic PIN generation
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(themeColor)
+                            .font(.system(size: 16))
                         
-                        TextField("Enter 4-digit PIN", text: $customPIN)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.numberPad)
-                            .onChange(of: customPIN) { _, newValue in
-                                if newValue.count > 4 {
-                                    customPIN = String(newValue.prefix(4))
-                                }
-                            }
+                        Text("A unique 4-digit PIN will be generated and shown after creation")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(themeColor.opacity(0.1))
+                    .cornerRadius(8)
                     
                 }
                 .padding(.horizontal, 20)
@@ -818,9 +817,7 @@ struct AddChildView: View {
     }
     
     private var canAddChild: Bool {
-        !childName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && 
-        customPIN.count == 4 && 
-        customPIN.allSatisfy { $0.isNumber }
+        !childName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
     private func addChild() {
@@ -830,10 +827,9 @@ struct AddChildView: View {
             let generatedPin = await authService.addChild(name: trimmedName, avatar: selectedAvatar.rawValue)
             
             if !generatedPin.isEmpty {
-                alertMessage = "Child '\(trimmedName)' added successfully with PIN: \(generatedPin)"
+                alertMessage = "Child '\(trimmedName)' added successfully!\n\nLogin PIN: \(generatedPin)\n\nPlease save this PIN - it will be needed for the child to log in."
                 showingAlert = true
                 childName = ""
-                customPIN = ""
                 selectedAvatar = .boy // Reset to default
             } else {
                 alertMessage = authService.errorMessage ?? "Failed to add child"
