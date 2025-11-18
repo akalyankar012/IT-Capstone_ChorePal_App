@@ -27,7 +27,7 @@ struct ChildDashboardView: View {
                 VStack(spacing: 0) {
                     // Top header (avatar + points + theme toggle)
                     HStack {
-                        AvatarView(avatarName: AvatarStore.getChildAvatarName(childId: authService.currentChild?.id ?? UUID()) ?? "boy", size: 50, themeColor: themeColor)
+                        AvatarView(avatarName: authService.currentChild?.avatar ?? "boy", size: 50, themeColor: themeColor)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(authService.currentChild?.name ?? "Child")
                                 .font(.title3)
