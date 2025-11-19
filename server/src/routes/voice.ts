@@ -130,7 +130,7 @@ router.post('/turn', async (req, res) => {
     }
 
     // Get session and validate it's active
-    const session = voiceSessionStore.getSession(sessionId);
+    let session = voiceSessionStore.getSession(sessionId);
     if (!session) {
       return res.status(409).json({ 
         error: 'Session not found. Please start a new session first.',
@@ -197,24 +197,9 @@ router.post('/turn', async (req, res) => {
       (delta.slot_updates as any).dueIso = dateNormalizer.normalizeDueText(delta.slot_updates.dueText);
     }
 
-    // Merge slot updates
+    // Merge slot updates using VoiceMergeLogic to properly handle name-to-ID conversion
     try {
-      session.slots = { ...session.slots, ...delta.slot_updates };
-      
-      // Compute missing slots manually
-      const missing: string[] = [];
-      if (!session.slots.assignedChildId) missing.push('assignedChild');
-      if (!session.slots.title) missing.push('title');
-      if (!session.slots.dueIso) missing.push('due');
-      if (!session.slots.points) missing.push('points');
-      session.missing = missing;
-      
-      session.expectedSlot = session.missing.length > 0 ? session.missing[0] as 'assignedChild' | 'title' | 'due' | 'points' : undefined;
-      
-      if (session.missing.length === 0) {
-        session.status = 'ready_to_create';
-      }
-      
+      session = voiceMergeLogic.mergeSlotUpdates(session, delta);
       voiceSessionStore.updateSession(sessionId, session);
       console.log(`📊 Updated session slots:`, session.slots);
       console.log(`📊 Session missing fields:`, session.missing);
@@ -287,12 +272,18 @@ router.post('/parse', async (req, res) => {
     }
 
     // Extract slot delta from utterance
+    console.log(`📝 Extracting from transcript: "${transcript}"`);
+    console.log(`📊 Current session slots:`, session?.slots);
+    console.log(`📊 Expected slot:`, session?.expectedSlot);
+    
     const delta = await voiceExtractor.extractSlotDelta(
       transcript,
-      session.slots,
-      session.expectedSlot,
-      session.childrenRoster
+      session?.slots || {},
+      session?.expectedSlot,
+      session?.childrenRoster || children.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name }))
     );
+
+    console.log(`✅ Extracted delta:`, JSON.stringify(delta, null, 2));
 
     // Handle cancellation
     if (delta.intent === 'cancel') {
@@ -312,7 +303,15 @@ router.post('/parse', async (req, res) => {
     }
 
     // Handle new task - only create fresh session if previous task was completed
-    if (transcript.toLowerCase().includes('create task') || delta.intent === 'new_task') {
+    // IMPORTANT: Don't create new session if user is just answering a follow-up with child name
+    const isJustChildName = delta.intent === 'answer' && delta.slot_updates.assignedChildName && 
+                           Object.keys(delta.slot_updates).length === 1 && 
+                           !delta.slot_updates.title && !delta.slot_updates.dueText && !delta.slot_updates.points;
+    
+    const isExplicitNewTask = transcript.toLowerCase().includes('create task') || 
+                              (delta.intent === 'new_task' && !isJustChildName);
+    
+    if (isExplicitNewTask) {
       // Only start fresh session if previous task was completed or if no active session
       if (session && session.status === 'ready_to_create') {
         console.log(`🔄 Previous task completed, starting fresh session`);
@@ -327,6 +326,11 @@ router.post('/parse', async (req, res) => {
       } else {
         console.log(`🔄 Continuing current session for new task`);
       }
+    } else if (!session) {
+      // No session exists and this isn't a new task - create one anyway
+      const newSessionId = uuidv4();
+      session = voiceSessionStore.createSession(newSessionId, children);
+      console.log(`🆕 Created new session for follow-up: ${newSessionId}`);
     }
     
     // Handle child switching - clear current task but keep session

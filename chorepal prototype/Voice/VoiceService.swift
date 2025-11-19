@@ -36,8 +36,8 @@ class VoiceService: ObservableObject {
     // MARK: - Speech-to-Text
     
     func uploadSTT(audioData: Data, phraseHints: [String] = []) async throws -> String {
-        isLoading = true
-        defer { isLoading = false }
+        await MainActor.run { isLoading = true }
+        defer { Task { @MainActor in isLoading = false } }
         
         guard let url = URL(string: config.sttEndpoint) else {
             throw VoiceError.networkError
@@ -88,8 +88,8 @@ class VoiceService: ObservableObject {
     // MARK: - Parse Transcript
     
     func parseTranscript(_ transcript: String, children: [VoiceChild], sessionId: String? = nil, context: String? = nil) async throws -> VoiceResponse {
-        isLoading = true
-        defer { isLoading = false }
+        await MainActor.run { isLoading = true }
+        defer { Task { @MainActor in isLoading = false } }
         
         guard let url = URL(string: config.parseEndpoint) else {
             throw VoiceError.networkError
@@ -135,8 +135,8 @@ class VoiceService: ObservableObject {
     // MARK: - Session Management
     
     func startVoiceSession(userId: String, children: [VoiceChild]) async throws -> String {
-        isLoading = true
-        defer { isLoading = false }
+        await MainActor.run { isLoading = true }
+        defer { Task { @MainActor in isLoading = false } }
         
         guard let url = URL(string: "\(config.baseURL)/voice/session/start") else {
             throw VoiceError.networkError
@@ -187,8 +187,8 @@ class VoiceService: ObservableObject {
     }
     
     func processTurnWithTranscript(transcript: String, sessionId: String, turnId: String, turnIndex: Int, userId: String, children: [VoiceChild]) async throws -> VoiceResponse {
-        isLoading = true
-        defer { isLoading = false }
+        await MainActor.run { isLoading = true }
+        defer { Task { @MainActor in isLoading = false } }
         
         // TEMPORARY FIX: Use legacy parse endpoint until server issue is resolved
         guard let url = URL(string: config.parseEndpoint) else {

@@ -27,6 +27,8 @@ struct VoiceTaskCreationView: View {
     @State private var sessionId: String? = nil
     @State private var turnIndex = 0
     @State private var userId: String = ""
+    @State private var isSessionReady = false
+    @State private var lastChildrenSignature = ""
     
     // Enhanced animation states
     @State private var pulseAnimation = false
@@ -238,8 +240,15 @@ struct VoiceTaskCreationView: View {
                 VStack(spacing: 24) {
                     // Status text
                     if !isRecording && !isProcessing {
-                        Text(conversationStep == 0 ? "Tap and hold to speak" : "Tap and hold to respond")
+                        Text(conversationStep == 0 ? "Tap to start recording" : "Tap again to respond")
                             .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    if !isSessionReady {
+                        Text("Connecting to voice assistant…")
+                            .font(.caption)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                     }
@@ -345,19 +354,6 @@ struct VoiceTaskCreationView: View {
                         .disabled(isProcessing)
                         .scaleEffect(bounceAnimation ? 0.95 : 1.0)
                         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: bounceAnimation)
-                        .onLongPressGesture(minimumDuration: 0.1, maximumDistance: .infinity, pressing: { pressing in
-                            if pressing && !isRecording && !isProcessing {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                    bounceAnimation = true
-                                }
-                                startRecording()
-                            } else if !pressing && isRecording {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                    bounceAnimation = false
-                                }
-                                stopRecording()
-                            }
-                        }, perform: {})
                     }
                     
                     // Enhanced Status indicators with advanced animations
@@ -415,7 +411,7 @@ struct VoiceTaskCreationView: View {
                                     .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: recordingAnimation)
                             }
                             
-                            Text("Release to stop")
+                            Text("Tap again to stop")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.secondary)
                                 .opacity(0.7)
@@ -812,12 +808,12 @@ struct VoiceTaskCreationView: View {
     }
     
     // MARK: - Voice Response Handling
+    @MainActor
     private func handleVoiceResponse(_ response: VoiceResponse) {
         print("🔍 handleVoiceResponse() - sessionId: \(sessionId ?? "nil"), conversationStep: \(conversationStep)")
         print("🔍 Voice response: \(response)")
 
-        // All UI updates must happen on main thread
-        DispatchQueue.main.async {
+        // All UI updates are now guaranteed to be on main thread via @MainActor
             // Reset recording and processing state
             self.isRecording = false
             self.recordingAnimation = false
@@ -859,7 +855,6 @@ struct VoiceTaskCreationView: View {
             }
             
             print("🔍 handleVoiceResponse() - After: sessionId: \(self.sessionId ?? "nil"), conversationStep: \(self.conversationStep)")
-        }
     }
     
     // MARK: - Chore Creation
@@ -911,14 +906,11 @@ struct VoiceTaskCreationView: View {
             choreService.addChore(newChore)
             
             await MainActor.run {
-                // Add success message (clean confirmation)
+                // Add success message (clean confirmation) - don't speak, server already spoke the confirmation
                 let successMessage = ChatMessage(text: "Task created: \(taskFields.title) for \(child.name), due \(formatDate(dueDate)), worth \(taskFields.points) points", isUser: false)
                 chatMessages.append(successMessage)
                 
-                // Speak confirmation
-                let confirmationText = "Done! \(taskFields.title) for \(child.name), due \(formatDate(dueDate)), worth \(taskFields.points) points."
-                speechBack.speak(confirmationText)
-                
+                // Don't speak here - the server response was already spoken in handleVoiceResponse
                 print("✅ createChore() - Task created successfully")
             }
         }
@@ -1090,7 +1082,7 @@ struct RecordingIndicatorView: View {
                         .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: waveAnimation)
                 }
                 
-                Text("Release to stop")
+                Text("Tap again to stop")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
                     .opacity(0.7)

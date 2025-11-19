@@ -1277,47 +1277,6 @@ struct ParentSettingsView: View {
                 
                 // Settings List
                 VStack(spacing: 0) {
-
-                    // Language Section
-                    VStack(spacing: 0) {
-                        HStack {
-                            Text("Language")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .background(Color(.systemBackground))
-                        
-                        Button(action: {
-                            // Language picker removed
-                        }) {
-                            HStack {
-                                Text("🇺🇸")
-                                    .font(.title2)
-                                
-                                Text("English")
-                                    .foregroundColor(.primary)
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 16)
-                            .background(Color(.systemBackground))
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
-                    
                     // Family Section
                     VStack(spacing: 0) {
                         HStack {

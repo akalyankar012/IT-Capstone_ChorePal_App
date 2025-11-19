@@ -33,15 +33,9 @@ class VoiceMergeLogic {
                 // Don't add to missing, but we'll need to handle this in the response
             }
         }
-        // Check for title - use default "task" if not specified in complete commands
+        // Check for title
         if (!updatedSlots.title) {
-            // If this is a complete command with child but no title, use default
-            if (delta.intent === 'new_task' && updatedSlots.assignedChildId && !updatedSlots.title) {
-                updatedSlots.title = 'task';
-            }
-            else {
-                missing.push('title');
-            }
+            missing.push('title');
         }
         // Check for due date
         if (!updatedSlots.dueIso && !updatedSlots.dueText) {
