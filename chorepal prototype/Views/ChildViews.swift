@@ -37,7 +37,7 @@ struct ChildDashboardView: View {
                                 Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption2)
                                 Text("\(authService.currentChild?.points ?? 0) points")
                                     .font(.caption)
-                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.8))
+                                    .foregroundColor(selectedTheme == .light ? .black : Color.white.opacity(0.8))
                             }
                         }
                         Spacer()
@@ -57,15 +57,22 @@ struct ChildDashboardView: View {
                     .padding(.bottom, 12)
 
                     // Tabs (Tasks, Rewards, Notifications, Calendar, Settings)
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         childTabButton("Tasks", icon: "list.bullet", id: 0)
                         childTabButton("Rewards", icon: "gift", id: 1)
                         childTabButtonWithBadge("Alerts", icon: "bell.fill", id: 2, badgeCount: notificationService.unreadCount)
                         childTabButton("Calendar", icon: "calendar", id: 3)
                         childTabButton("Settings", icon: "gearshape", id: 4)
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(selectedTheme == .light ? Color.white : Color.black.opacity(0.3))
+                            .shadow(color: Color.black.opacity(selectedTheme == .light ? 0.08 : 0.3), radius: 8, x: 0, y: 2)
+                    )
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 12)
 
                     // Content view based on selected tab (no swipe-through)
                     Group {
@@ -88,7 +95,10 @@ struct ChildDashboardView: View {
                             ChildChoresLiteView(choreService: choreService, authService: authService)
                         }
                     }
-                    .transition(.opacity)
+                    .id(selectedTab)
+                    .transaction { transaction in
+                        transaction.animation = nil
+                    }
                 }
             }
             .navigationBarHidden(true)
@@ -166,55 +176,74 @@ struct ChildDashboardView: View {
     }
 
     private func childTabButton(_ title: String, icon: String, id: Int) -> some View {
-        Button(action: { withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { selectedTab = id } }) {
+        Button(action: {
+            var transaction = Transaction(animation: nil)
+            withTransaction(transaction) {
+                selectedTab = id
+            }
+        }) {
             VStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.9)))
+                    .font(.system(size: 17, weight: selectedTab == id ? .semibold : .medium))
+                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.black.opacity(0.7) : Color.white.opacity(0.7)))
                 Text(title)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.9)))
+                    .font(.system(size: 10, weight: selectedTab == id ? .semibold : .medium))
+                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.black.opacity(0.7) : Color.white.opacity(0.7)))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
-            .padding(.horizontal, 4)
-            .background(RoundedRectangle(cornerRadius: 10).fill(selectedTab == id ? themeColor.opacity(0.15) : Color.clear))
+            .padding(.horizontal, 6)
+            .background(
+                Capsule()
+                    .fill(selectedTab == id ? themeColor.opacity(0.2) : Color.clear)
+                    .shadow(color: selectedTab == id ? themeColor.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
+            )
         }
         .buttonStyle(.plain)
     }
     
     private func childTabButtonWithBadge(_ title: String, icon: String, id: Int, badgeCount: Int) -> some View {
-        Button(action: { withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { selectedTab = id } }) {
+        Button(action: {
+            var transaction = Transaction(animation: nil)
+            withTransaction(transaction) {
+                selectedTab = id
+            }
+        }) {
             VStack(spacing: 4) {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.9)))
+                        .font(.system(size: 17, weight: selectedTab == id ? .semibold : .medium))
+                        .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.black.opacity(0.7) : Color.white.opacity(0.7)))
                     
                     if badgeCount > 0 {
                         Circle()
                             .fill(Color.red)
-                            .frame(width: 16, height: 16)
+                            .frame(width: 18, height: 18)
                             .overlay(
                                 Text("\(badgeCount)")
-                                    .font(.system(size: 9, weight: .bold))
+                                    .font(.system(size: 10, weight: .bold))
                                     .foregroundColor(.white)
                             )
-                            .offset(x: 8, y: -8)
+                            .offset(x: 10, y: -10)
+                            .shadow(color: Color.red.opacity(0.5), radius: 3, x: 0, y: 2)
                     }
                 }
                 Text(title)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.9)))
+                    .font(.system(size: 10, weight: selectedTab == id ? .semibold : .medium))
+                    .foregroundColor(selectedTab == id ? themeColor : (selectedTheme == .light ? Color.black.opacity(0.7) : Color.white.opacity(0.7)))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
-            .padding(.horizontal, 4)
-            .background(RoundedRectangle(cornerRadius: 10).fill(selectedTab == id ? themeColor.opacity(0.15) : Color.clear))
+            .padding(.horizontal, 6)
+            .background(
+                Capsule()
+                    .fill(selectedTab == id ? themeColor.opacity(0.2) : Color.clear)
+                    .shadow(color: selectedTab == id ? themeColor.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
+            )
         }
         .buttonStyle(.plain)
     }
@@ -247,15 +276,15 @@ struct ChildChoresLiteView: View {
                                     .foregroundColor(selectedTheme == .light ? .primary : .white)
                                 Text(chore.description)
                                     .font(.caption)
-                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.88))
+                                    .foregroundColor(selectedTheme == .light ? .black : Color.white.opacity(0.88))
                                     .lineLimit(2)
                                 HStack(spacing: 10) {
                                     Label("\(chore.points) pts", systemImage: "star.fill")
                                         .font(.caption)
-                                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.82))
+                                        .foregroundColor(selectedTheme == .light ? .black : Color.white.opacity(0.82))
                                     Label(chore.dueDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
                                         .font(.caption)
-                                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.82))
+                                        .foregroundColor(selectedTheme == .light ? .black : Color.white.opacity(0.82))
                                 }
                             }
                             Spacer()
@@ -302,6 +331,13 @@ struct ChildChoresLiteView: View {
             } else {
                 Text("Error: No child logged in")
                     .foregroundColor(.red)
+            }
+        }
+        .onAppear {
+            // Load chores for the logged-in child when view appears
+            if let childId = authService.currentChild?.id {
+                print("📋 ChildChoresLiteView appeared - loading chores for child: \(childId)")
+                choreService.loadChoresForLoggedInChild(childId)
             }
         }
     }
@@ -446,11 +482,11 @@ struct ChildRewardsLiteView: View {
                                 Text("No rewards yet!")
                                     .font(.title3)
                                     .fontWeight(.semibold)
-                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.9))
+                                    .foregroundColor(selectedTheme == .light ? .black : Color.white.opacity(0.9))
                                 Text("Complete chores to earn points and redeem rewards")
                                     .font(.caption)
                                     .multilineTextAlignment(.center)
-                                    .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.8))
+                                    .foregroundColor(selectedTheme == .light ? .black : Color.white.opacity(0.8))
                                     .padding(.horizontal, 40)
                             }
                             .frame(maxWidth: .infinity)
@@ -486,7 +522,7 @@ struct ChildRewardsLiteView: View {
         Button(action: { withAnimation { selectedRewardTab = id } }) {
             Text(title)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(selectedRewardTab == id ? themeColor : (selectedTheme == .light ? Color.gray : Color.white.opacity(0.9)))
+                .foregroundColor(selectedRewardTab == id ? themeColor : (selectedTheme == .light ? Color.black : Color.white.opacity(0.9)))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .background(

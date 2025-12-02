@@ -121,6 +121,7 @@ struct Chore: Identifiable, Codable {
     var isCompleted: Bool
     var isRequired: Bool
     var assignedToChildId: UUID?
+    var parentId: UUID?  // ID of the parent who created this chore
     var createdAt: Date
     var requiresPhotoProof: Bool = true
     var photoProofStatus: PhotoProofStatus?
@@ -163,9 +164,10 @@ struct Reward: Identifiable, Codable {
     var isAvailable: Bool
     var purchasedAt: Date?
     var purchasedByChildId: UUID?
+    var parentId: UUID?
     var createdAt: Date
     
-    init(name: String, description: String = "", points: Int, category: RewardCategory = .other, isAvailable: Bool = true, purchasedAt: Date? = nil, purchasedByChildId: UUID? = nil) {
+    init(name: String, description: String = "", points: Int, category: RewardCategory = .other, isAvailable: Bool = true, purchasedAt: Date? = nil, purchasedByChildId: UUID? = nil, parentId: UUID? = nil) {
         self.name = name
         self.description = description
         self.points = points
@@ -173,6 +175,7 @@ struct Reward: Identifiable, Codable {
         self.isAvailable = isAvailable
         self.purchasedAt = purchasedAt
         self.purchasedByChildId = purchasedByChildId
+        self.parentId = parentId
         self.createdAt = Date()
     }
     

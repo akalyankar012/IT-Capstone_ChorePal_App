@@ -31,7 +31,7 @@ struct ChildRewardCard: View {
                 if !reward.description.isEmpty {
                     Text(reward.description)
                         .font(.caption)
-                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.85))
+                        .foregroundColor(selectedTheme == .light ? .black : Color.white.opacity(0.85))
                         .lineLimit(2)
                 }
                 
@@ -125,7 +125,7 @@ struct RedeemedRewardCard: View {
                 if !reward.description.isEmpty {
                     Text(reward.description)
                         .font(.caption)
-                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.85))
+                        .foregroundColor(selectedTheme == .light ? .black : Color.white.opacity(0.85))
                         .lineLimit(2)
                 }
                 
@@ -142,13 +142,13 @@ struct RedeemedRewardCard: View {
                     }
                     
                     Text("•")
-                        .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.7))
+                        .foregroundColor(selectedTheme == .light ? .black : Color.white.opacity(0.7))
                     
                     // Redeemed date
                     if let purchasedAt = reward.purchasedAt {
                         Text("Redeemed \(purchasedAt, style: .date)")
                             .font(.caption2)
-                            .foregroundColor(selectedTheme == .light ? .gray : Color.white.opacity(0.8))
+                            .foregroundColor(selectedTheme == .light ? .black : Color.white.opacity(0.8))
                     }
                 }
             }

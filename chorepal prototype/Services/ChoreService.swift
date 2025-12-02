@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import Firebase
+import FirebaseAuth
 import FirebaseFirestore
 
 class ChoreService: ObservableObject {
@@ -15,27 +16,47 @@ class ChoreService: ObservableObject {
     private var cachedChores: [Chore] = []
     private var lastSyncTime: Date?
     
-    // Real-time listener
+    // Real-time listeners
     private var choresListener: ListenerRegistration?
+    private var childChoresListener: ListenerRegistration?
     
     init() {
-        // Load data immediately on init
-        Task {
-            await loadChoresFromFirestore()
-        }
+        // Don't load data immediately - wait for authentication
+        // Data will be loaded when user (parent or child) signs in
         
-        // Also listen for authentication events to reload
+        // Listen for authentication events (both parent and child)
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(loadDataOnAuthentication),
+            selector: #selector(loadDataOnAuthentication(_:)),
             name: .userAuthenticated,
             object: nil
         )
     }
     
-    @objc private func loadDataOnAuthentication() {
+    @objc private func loadDataOnAuthentication(_ notification: Notification) {
+        // Get childId from notification if child is logging in
+        if let childIdString = notification.userInfo?["childId"] as? String,
+           let childId = UUID(uuidString: childIdString) {
+            // Child is logged in - load chores for that child
+            print("📋 Child authentication detected, loading chores for child: \(childId)")
+            Task {
+                await loadChoresForChild(childId)
+            }
+        } else if Auth.auth().currentUser != nil {
+            // Parent is logged in - load chores for parent (filtered by parentId)
+            print("📋 Parent authentication detected, loading chores for parent")
+            Task {
+                await loadChoresFromFirestore()
+            }
+        } else {
+            print("⚠️ No childId or parent user found in authentication notification")
+        }
+    }
+    
+    // Method to load chores for a specific child (called when child logs in)
+    func loadChoresForLoggedInChild(_ childId: UUID) {
         Task {
-            await loadChoresFromFirestore()
+            await loadChoresForChild(childId)
         }
     }
     
@@ -46,9 +67,19 @@ class ChoreService: ObservableObject {
     // MARK: - CRUD Operations
     
     func addChore(_ chore: Chore) {
+        // Get current user's parent ID from Firebase Auth
+        guard let currentUser = Auth.auth().currentUser else {
+            print("❌ No authenticated user found when adding chore")
+            return
+        }
+        
+        // Note: parentId in the Chore model is UUID?, but we store parentId as Firebase Auth UID (string) in Firestore
+        // The parentId field in the model remains nil since Firebase Auth UIDs are not valid UUIDs
+        // We filter by parentId (string) in Firestore queries
+        
         chores.append(chore)
         
-        // Save to Firestore
+        // Save to Firestore (will save parentId as Firebase Auth UID string)
         Task {
             await saveChoreToFirestore(chore)
             
@@ -82,7 +113,7 @@ class ChoreService: ObservableObject {
         }
     }
     
-    private func updateChoreInFirestore(_ chore: Chore) async {
+    func updateChoreInFirestore(_ chore: Chore) async {
         await updateChoreInFirestoreWithRetry(chore)
     }
     
@@ -195,7 +226,20 @@ class ChoreService: ObservableObject {
         }
         
         do {
-            let snapshot = try await db.collection("chores").getDocuments()
+            // Get current user's parent ID from Firebase Auth
+            guard let currentUser = Auth.auth().currentUser else {
+                print("❌ No authenticated user found when loading chores")
+                await MainActor.run {
+                    self.chores = []
+                    self.isLoading = false
+                }
+                return
+            }
+            
+            // Filter chores by parentId (using Firebase Auth UID)
+            let snapshot = try await db.collection("chores")
+                .whereField("parentId", isEqualTo: currentUser.uid)
+                .getDocuments()
             
             await MainActor.run {
                 var loadedChores: [Chore] = []
@@ -230,6 +274,11 @@ class ChoreService: ObservableObject {
                         let choreId = UUID(uuidString: document.documentID) ?? UUID()
                         let assignedToChildId = (data["assignedToChildId"] as? String).flatMap { UUID(uuidString: $0) }
                         
+                        // Load parentId if it exists (parentId is stored as Firebase Auth UID string, not UUID)
+                        // We don't need to convert it since we filter by string in Firestore
+                        // The parentId field in the model can remain nil as it's used for filtering, not storage
+                        let _ = data["parentId"] as? String  // parentId exists in Firestore for filtering
+                        
                         // Load photo proof fields
                         let requiresPhotoProof = data["requiresPhotoProof"] as? Bool ?? true
                         let photoProofStatus: PhotoProofStatus? = (data["photoProofStatus"] as? String).flatMap { PhotoProofStatus(rawValue: $0) }
@@ -244,6 +293,7 @@ class ChoreService: ObservableObject {
                             isCompleted: isCompleted,
                             isRequired: isRequired,
                             assignedToChildId: assignedToChildId,
+                            parentId: nil,  // parentId is filtered in Firestore query, not needed in model
                             createdAt: createdAt,
                             requiresPhotoProof: requiresPhotoProof,
                             photoProofStatus: photoProofStatus,
@@ -257,6 +307,11 @@ class ChoreService: ObservableObject {
                 self.chores = loadedChores
                 self.isLoading = false
                 print("✅ Loaded \(loadedChores.count) chores from Firestore")
+            }
+            
+            // Set up real-time listener for parent's chores
+            await MainActor.run {
+                self.setupRealTimeListener()
             }
             
         } catch {
@@ -275,9 +330,13 @@ class ChoreService: ObservableObject {
         }
         
         do {
+            // Load chores assigned to this child
+            // Filter by assignedToChildId - the parentId filter is implicit since only parent's chores can be assigned to their children
             let snapshot = try await db.collection("chores")
                 .whereField("assignedToChildId", isEqualTo: childId.uuidString)
                 .getDocuments()
+            
+            print("📋 Loading chores for child \(childId) - query returned \(snapshot.documents.count) documents")
             
             await MainActor.run {
                 var loadedChores: [Chore] = []
@@ -338,6 +397,12 @@ class ChoreService: ObservableObject {
                 self.chores = loadedChores
                 self.isLoading = false
                 print("✅ Loaded \(loadedChores.count) chores for child \(childId) from Firestore")
+            }
+            
+            // Set up real-time listener for this child's chores
+            print("📡 Setting up real-time listener for child \(childId) after loading chores")
+            await MainActor.run {
+                self.setupChildRealTimeListener(childId: childId)
             }
             
         } catch {
@@ -462,7 +527,17 @@ class ChoreService: ObservableObject {
     // MARK: - Real-time Listeners
     
     func setupRealTimeListener() {
+        // Clean up existing listener
+        cleanupListener()
+        
+        // Get current user's parent ID from Firebase Auth
+        guard let currentUser = Auth.auth().currentUser else {
+            print("⚠️ No authenticated user found for real-time listener")
+            return
+        }
+        
         choresListener = db.collection("chores")
+            .whereField("parentId", isEqualTo: currentUser.uid)
             .addSnapshotListener { [weak self] snapshot, error in
                 DispatchQueue.main.async {
                     if let error = error {
@@ -486,6 +561,51 @@ class ChoreService: ObservableObject {
                     print("🔄 Real-time chores update: \(loadedChores.count) chores")
                 }
             }
+    }
+    
+    func setupChildRealTimeListener(childId: UUID) {
+        // Clean up existing child listener
+        childChoresListener?.remove()
+        childChoresListener = nil
+        
+        print("🔔 Setting up real-time listener for child chores: \(childId)")
+        
+        childChoresListener = db.collection("chores")
+            .whereField("assignedToChildId", isEqualTo: childId.uuidString)
+            .addSnapshotListener { [weak self] snapshot, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("❌ Error listening for child chores changes: \(error)")
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents else {
+                        print("⚠️ Snapshot has no documents")
+                        return
+                    }
+                    
+                    print("🔄 Real-time listener triggered - received \(documents.count) documents for child \(childId)")
+                    
+                    var loadedChores: [Chore] = []
+                    for document in documents {
+                        if let chore = self?.parseChoreFromDocument(document) {
+                            loadedChores.append(chore)
+                        } else {
+                            print("⚠️ Failed to parse chore from document: \(document.documentID)")
+                        }
+                    }
+                    
+                    self?.chores = loadedChores
+                    print("🔄 Real-time child chores update: \(loadedChores.count) chores for child \(childId)")
+                    
+                    // Debug: Log each chore's status
+                    for chore in loadedChores {
+                        print("   📋 Chore '\(chore.title)': isCompleted=\(chore.isCompleted), photoProofStatus=\(chore.photoProofStatus?.rawValue ?? "nil")")
+                    }
+                }
+            }
+        
+        print("✅ Real-time listener set up for child \(childId)")
     }
     
     private func parseChoreFromDocument(_ document: DocumentSnapshot) -> Chore? {
@@ -541,7 +661,9 @@ class ChoreService: ObservableObject {
     
     func cleanupListener() {
         choresListener?.remove()
+        childChoresListener?.remove()
         choresListener = nil
+        childChoresListener = nil
     }
     
     // MARK: - Optimized Data Loading
@@ -611,6 +733,11 @@ class ChoreService: ObservableObject {
     
     private func saveChoreToFirestoreWithRetry(_ chore: Chore, retryCount: Int = 0) async {
         do {
+            guard let currentUser = Auth.auth().currentUser else {
+                print("❌ No authenticated user found for chore save")
+                return
+            }
+            
             var choreData: [String: Any] = [
                 "title": chore.title,
                 "description": chore.description,
@@ -619,6 +746,7 @@ class ChoreService: ObservableObject {
                 "isCompleted": chore.isCompleted,
                 "isRequired": chore.isRequired,
                 "assignedToChildId": chore.assignedToChildId?.uuidString ?? NSNull(),
+                "parentId": currentUser.uid, // Always set parentId to current user
                 "requiresPhotoProof": chore.requiresPhotoProof,
                 "createdAt": Timestamp(date: chore.createdAt),
                 "updatedAt": FieldValue.serverTimestamp()
@@ -653,17 +781,51 @@ class ChoreService: ObservableObject {
     
     private func updateChoreInFirestoreWithRetry(_ chore: Chore, retryCount: Int = 0) async {
         do {
+            // Get parentId - either from Firebase Auth (parent) or from child's data (child)
+            var parentId: String?
+            
+            if let currentUser = Auth.auth().currentUser {
+                // Parent is logged in via Firebase Auth
+                parentId = currentUser.uid
+            } else if let assignedChildId = chore.assignedToChildId {
+                // Child is logged in (no Firebase Auth) - get parentId from child's data
+                let childDoc = try await db.collection("children").document(assignedChildId.uuidString).getDocument()
+                if childDoc.exists, let childData = childDoc.data(), let parentIdString = childData["parentId"] as? String {
+                    parentId = parentIdString
+                    print("📋 Got parentId from child's data: \(parentIdString)")
+                }
+            }
+            
+            // If we still don't have parentId, try to get it from the existing chore document
+            if parentId == nil {
+                let choreDoc = try await db.collection("chores").document(chore.id.uuidString).getDocument()
+                if choreDoc.exists, let choreData = choreDoc.data(), let existingParentId = choreData["parentId"] as? String {
+                    parentId = existingParentId
+                    print("📋 Got parentId from existing chore document: \(existingParentId)")
+                }
+            }
+            
+            // Log if we couldn't determine parentId
+            if parentId == nil {
+                print("⚠️ Could not determine parentId for chore update - will try to preserve existing parentId")
+            }
+            
             var choreData: [String: Any] = [
                 "title": chore.title,
                 "description": chore.description,
                 "points": chore.points,
-                "dueDate": chore.dueDate,
+                "dueDate": Timestamp(date: chore.dueDate),
                 "isCompleted": chore.isCompleted,
                 "isRequired": chore.isRequired,
                 "assignedToChildId": chore.assignedToChildId?.uuidString ?? NSNull(),
                 "requiresPhotoProof": chore.requiresPhotoProof,
                 "updatedAt": FieldValue.serverTimestamp()
             ]
+            
+            // Add parentId if we have it
+            if let parentIdToUse = parentId {
+                choreData["parentId"] = parentIdToUse
+            }
             
             // Add photo proof fields if present
             if let photoProofStatus = chore.photoProofStatus {
@@ -673,8 +835,14 @@ class ChoreService: ObservableObject {
                 choreData["parentFeedback"] = parentFeedback
             }
             
+            print("📤 Updating chore in Firestore - document ID: \(chore.id.uuidString)")
+            print("📤 Update data: isCompleted=\(chore.isCompleted), photoProofStatus=\(chore.photoProofStatus?.rawValue ?? "nil"), assignedToChildId=\(chore.assignedToChildId?.uuidString ?? "nil")")
+            
             try await db.collection("chores").document(chore.id.uuidString).updateData(choreData)
-            print("✅ Chore updated in Firestore: \(chore.title) (photoStatus: \(chore.photoProofStatus?.rawValue ?? "none"))")
+            print("✅ Chore updated in Firestore: \(chore.title)")
+            print("   - isCompleted: \(chore.isCompleted)")
+            print("   - photoProofStatus: \(chore.photoProofStatus?.rawValue ?? "nil")")
+            print("   - assignedToChildId: \(chore.assignedToChildId?.uuidString ?? "nil")")
             
         } catch {
             print("❌ Error updating chore in Firestore: \(error)")

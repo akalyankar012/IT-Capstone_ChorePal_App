@@ -178,7 +178,14 @@ struct PhotoCaptureFlow: View {
             }
             .onChange(of: uploadSuccess) { success in
                 if success {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    // Wait a bit longer for Firestore update to complete before dismissing
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        // Reload chores before dismissing to ensure status is updated
+                        if let childId = authService.currentChild?.id {
+                            Task {
+                                await choreService.loadChoresForChild(childId)
+                            }
+                        }
                         dismiss()
                     }
                 }
@@ -240,30 +247,54 @@ struct PhotoCaptureFlow: View {
             
             await MainActor.run {
                 isUploading = false
-                
-                if success {
-                    // Update chore status to pending
-                    var updatedChore = chore
-                    updatedChore.photoProofStatus = .pending
-                    choreService.updateChore(updatedChore)
-                    
-                    // Send notification to parent
-                    if let parentId = authService.currentParent?.id,
-                       let childName = authService.currentChild?.name {
-                        Task {
-                            let notificationService = NotificationService()
-                            await notificationService.createNotification(
-                                userId: parentId,
-                                type: .photoSubmitted,
-                                title: "Photo Submitted for Review",
-                                message: "\(childName) submitted a photo for \"\(chore.title)\"",
-                                choreId: chore.id
-                            )
-                        }
+            }
+            
+            if success {
+                // Update chore status to pending immediately in local array
+                if let index = choreService.chores.firstIndex(where: { $0.id == chore.id }) {
+                    await MainActor.run {
+                        choreService.chores[index].photoProofStatus = .pending
+                        print("✅ Updated local chore photoProofStatus to pending for: \(chore.title)")
                     }
+                }
+                
+                // Update chore in Firestore
+                var updatedChore = chore
+                updatedChore.photoProofStatus = .pending
+                await choreService.updateChoreInFirestore(updatedChore)
                     
+                // Reload chores from Firestore to ensure sync
+                Task {
+                    // Small delay to ensure Firestore update completes
+                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                    
+                    // Reload chores for the child to see updated status
+                    if let childId = authService.currentChild?.id {
+                        await choreService.loadChoresForChild(childId)
+                        print("✅ Reloaded chores after photo upload")
+                    }
+                }
+                
+                // Send notification to parent
+                if let parentId = authService.currentParent?.id,
+                   let childName = authService.currentChild?.name {
+                    Task {
+                        let notificationService = NotificationService()
+                        await notificationService.createNotification(
+                            userId: parentId,
+                            type: .photoSubmitted,
+                            title: "Photo Submitted for Review",
+                            message: "\(childName) submitted a photo for \"\(chore.title)\"",
+                            choreId: chore.id
+                        )
+                    }
+                }
+                
+                await MainActor.run {
                     uploadSuccess = true
-                } else {
+                }
+            } else {
+                await MainActor.run {
                     errorMessage = "Failed to upload photo. Please check your connection and try again."
                     showError = true
                 }

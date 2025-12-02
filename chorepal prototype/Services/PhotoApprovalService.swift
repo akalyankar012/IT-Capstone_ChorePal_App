@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import Firebase
+import FirebaseAuth
 import FirebaseFirestore
 import UIKit
 
@@ -20,28 +21,106 @@ final class PhotoApprovalService: ObservableObject {
     func startListening(for parentId: UUID) {
         stopListening()
         
-        photosListener = db.collection("chorePhotos")
-            .whereField("approvalStatus", isEqualTo: "pending")
-            .addSnapshotListener { [weak self] snapshot, error in
-                guard let self = self else { return }
+        // Get current user's Firebase Auth UID to get children
+        guard let currentUser = Auth.auth().currentUser else {
+            print("❌ No authenticated user found for photo listening")
+            return
+        }
+        
+        // First, get all children for this parent
+        Task {
+            do {
+                let childrenSnapshot = try await db.collection("children")
+                    .whereField("parentId", isEqualTo: currentUser.uid)
+                    .getDocuments()
                 
-                if let error = error {
-                    print("❌ Error listening to photos: \(error)")
+                let childrenIds = childrenSnapshot.documents.compactMap { doc -> String? in
+                    return doc.documentID
+                }
+                
+                guard !childrenIds.isEmpty else {
+                    print("⚠️ No children found for parent, no photos to show")
+                    await MainActor.run {
+                        self.pendingPhotos = []
+                    }
                     return
                 }
                 
-                guard let documents = snapshot?.documents else {
-                    print("⚠️ No pending photos found")
-                    return
+                // Firestore's whereIn can only handle up to 10 values
+                // If more than 10 children, we'll need to query in batches
+                if childrenIds.count <= 10 {
+                    // Use whereIn query for up to 10 children
+                    await self.setupPhotosListener(for: childrenIds)
+                } else {
+                    // For more than 10 children, query in batches
+                    await self.setupPhotosListenerInBatches(for: childrenIds)
                 }
                 
-                Task {
-                    await self.loadPhotosFromDocuments(documents)
+            } catch {
+                print("❌ Error getting children for photo filtering: \(error)")
+                await MainActor.run {
+                    self.pendingPhotos = []
                 }
             }
+        }
     }
     
-    private func loadPhotosFromDocuments(_ documents: [QueryDocumentSnapshot]) async {
+    private func setupPhotosListener(for childrenIds: [String]) async {
+        await MainActor.run {
+            self.stopListening()
+            
+            self.photosListener = db.collection("chorePhotos")
+                .whereField("approvalStatus", isEqualTo: "pending")
+                .whereField("childId", in: childrenIds)
+                .addSnapshotListener { [weak self] snapshot, error in
+                    guard let self = self else { return }
+                    
+                    if let error = error {
+                        print("❌ Error listening to photos: \(error)")
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents else {
+                        print("⚠️ No pending photos found")
+                        return
+                    }
+                    
+                    Task {
+                        await self.loadPhotosFromDocuments(documents, filteringByChildrenIds: Set(childrenIds))
+                    }
+                }
+        }
+    }
+    
+    private func setupPhotosListenerInBatches(for childrenIds: [String]) async {
+        // Firestore whereIn limit is 10, so we need to batch
+        // For simplicity, we'll load all pending photos and filter in memory
+        await MainActor.run {
+            self.stopListening()
+            
+            self.photosListener = db.collection("chorePhotos")
+                .whereField("approvalStatus", isEqualTo: "pending")
+                .addSnapshotListener { [weak self] snapshot, error in
+                    guard let self = self else { return }
+                    
+                    if let error = error {
+                        print("❌ Error listening to photos: \(error)")
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents else {
+                        print("⚠️ No pending photos found")
+                        return
+                    }
+                    
+                    Task {
+                        await self.loadPhotosFromDocuments(documents, filteringByChildrenIds: Set(childrenIds))
+                    }
+                }
+        }
+    }
+    
+    private func loadPhotosFromDocuments(_ documents: [QueryDocumentSnapshot], filteringByChildrenIds: Set<String>? = nil) async {
         var photos: [ChorePhoto] = []
         
         for doc in documents {
@@ -56,6 +135,15 @@ final class PhotoApprovalService: ObservableObject {
                   let statusString = data["approvalStatus"] as? String,
                   let status = ApprovalStatus(rawValue: statusString) else {
                 continue
+            }
+            
+            // Filter by children IDs if provided (for batches with >10 children)
+            if let childrenIds = filteringByChildrenIds {
+                if !childrenIds.contains(childIdString) && !childrenIds.contains(doc.documentID) {
+                    // Check both childIdString and document ID (in case childId is stored differently)
+                    // Also check if the chore belongs to this parent via chore lookup
+                    continue
+                }
             }
             
             // Download image data
@@ -85,7 +173,7 @@ final class PhotoApprovalService: ObservableObject {
         
         await MainActor.run {
             self.pendingPhotos = photos
-            print("✅ Loaded \(photos.count) pending photos")
+            print("✅ Loaded \(photos.count) pending photos for parent")
         }
     }
     
@@ -136,11 +224,49 @@ final class PhotoApprovalService: ObservableObject {
         isLoading = true
         
         do {
-            let snapshot = try await db.collection("chorePhotos")
-                .whereField("approvalStatus", isEqualTo: "pending")
+            // Get current user's Firebase Auth UID to get children
+            guard let currentUser = Auth.auth().currentUser else {
+                print("❌ No authenticated user found for photo loading")
+                await MainActor.run {
+                    isLoading = false
+                    pendingPhotos = []
+                }
+                return
+            }
+            
+            // Get all children for this parent
+            let childrenSnapshot = try await db.collection("children")
+                .whereField("parentId", isEqualTo: currentUser.uid)
                 .getDocuments()
             
-            await loadPhotosFromDocuments(snapshot.documents)
+            let childrenIds = childrenSnapshot.documents.map { $0.documentID }
+            
+            guard !childrenIds.isEmpty else {
+                print("⚠️ No children found for parent, no photos to show")
+                await MainActor.run {
+                    isLoading = false
+                    pendingPhotos = []
+                }
+                return
+            }
+            
+            // Filter photos by children IDs
+            if childrenIds.count <= 10 {
+                // Use whereIn query for up to 10 children
+                let snapshot = try await db.collection("chorePhotos")
+                    .whereField("approvalStatus", isEqualTo: "pending")
+                    .whereField("childId", in: childrenIds)
+                    .getDocuments()
+                
+                await loadPhotosFromDocuments(snapshot.documents)
+            } else {
+                // For more than 10 children, load all and filter in memory
+                let snapshot = try await db.collection("chorePhotos")
+                    .whereField("approvalStatus", isEqualTo: "pending")
+                    .getDocuments()
+                
+                await loadPhotosFromDocuments(snapshot.documents, filteringByChildrenIds: Set(childrenIds))
+            }
             
         } catch {
             print("❌ Error fetching pending photos: \(error)")

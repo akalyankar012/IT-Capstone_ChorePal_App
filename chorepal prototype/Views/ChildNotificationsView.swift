@@ -11,10 +11,7 @@ struct ChildNotificationsView: View {
     
     var body: some View {
         ZStack {
-            if notificationService.isLoading {
-                ProgressView("Loading notifications...")
-                    .padding()
-            } else if notificationService.notifications.isEmpty {
+            if notificationService.notifications.isEmpty && !notificationService.isLoading {
                 // Empty state
                 VStack(spacing: 16) {
                     Image(systemName: "bell.slash.fill")

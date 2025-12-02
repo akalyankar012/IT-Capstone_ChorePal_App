@@ -587,6 +587,10 @@ struct VoiceTaskCreationView: View {
         
         Task {
             do {
+                // Check server health first
+                _ = try await voiceService.checkServerHealth()
+                print("✅ Server is reachable")
+                
                 let newSessionId = try await voiceService.startVoiceSession(userId: userId, children: children)
                 await MainActor.run {
                     sessionId = newSessionId
@@ -596,8 +600,9 @@ struct VoiceTaskCreationView: View {
                     print("🆕 Started new session: \(newSessionId)")
                 }
             } catch {
+                print("❌ Failed to start voice session: \(error)")
                 await MainActor.run {
-                    alertMessage = "Failed to start voice session: \(error.localizedDescription)"
+                    alertMessage = "Failed to connect to server: \(error.localizedDescription). Please check your network connection."
                     showingAlert = true
                 }
             }

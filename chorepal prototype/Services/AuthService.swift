@@ -28,6 +28,7 @@ class AuthService: ObservableObject {
     private var childrenListener: ListenerRegistration?
     private var choresListener: ListenerRegistration?
     private var rewardsListener: ListenerRegistration?
+    private var childDataListener: ListenerRegistration?
     
     // Temporary storage for testing
     private var parents: [Parent] = []
@@ -96,15 +97,28 @@ class AuthService: ObservableObject {
                 "phoneNumber": phoneNumber,
                 "email": email,
                 "createdAt": FieldValue.serverTimestamp(),
-                "isVerified": false
+                "isVerified": true  // Skip verification, mark as verified
             ]
             
             try await db.collection("parents").document(result.user.uid).setData(parentData)
             
+            // Create parent object immediately
+            let parentId = UUID(uuidString: result.user.uid) ?? UUID()
+            var parent = Parent(id: parentId, phoneNumber: phoneNumber, password: "")
+            parent.isVerified = true
+            
             await MainActor.run {
-                authState = .verifyPhone
-                isLoading = false
+                self.currentParent = parent
+                self.authState = .authenticated
+                self.isLoading = false
             }
+            
+            // Set up real-time listeners and load children
+            setupRealTimeListeners()
+            loadChildrenForParent(parentId: parentId)
+            
+            // Trigger data loading for authenticated parent (for rewards, chores, etc.)
+            NotificationCenter.default.post(name: .userAuthenticated, object: nil)
             
             return true
         } catch {
@@ -666,10 +680,17 @@ class AuthService: ObservableObject {
                 self.isLoading = false
             }
             
-            // Trigger data loading for authenticated child
-            NotificationCenter.default.post(name: .userAuthenticated, object: nil)
+            // Set up real-time listener for child's own data (to listen for points updates)
+            setupChildDataListener(childId: childId)
             
-            print("✅ Child authentication successful")
+            // Trigger data loading for authenticated child - pass parentId and childId in notification
+            NotificationCenter.default.post(
+                name: .userAuthenticated,
+                object: nil,
+                userInfo: ["parentId": parentIdString, "childId": childId.uuidString]
+            )
+            
+            print("✅ Child authentication successful - parentId: \(parentIdString)")
             return true
             
         } catch {
@@ -688,6 +709,9 @@ class AuthService: ObservableObject {
         do {
             // If we have a current child, just clear the child data (no Firebase Auth needed)
             if currentChild != nil {
+                // Clean up child data listener
+                childDataListener?.remove()
+                childDataListener = nil
                 currentChild = nil
                 authState = .none
                 print("✅ Child signed out successfully")
@@ -959,8 +983,51 @@ class AuthService: ObservableObject {
         childrenListener?.remove()
         choresListener?.remove()
         rewardsListener?.remove()
+        childDataListener?.remove()
         childrenListener = nil
         choresListener = nil
         rewardsListener = nil
+        childDataListener = nil
+    }
+    
+    // MARK: - Child Data Real-time Listener
+    
+    private func setupChildDataListener(childId: UUID) {
+        // Clean up existing listener
+        childDataListener?.remove()
+        childDataListener = nil
+        
+        print("🔔 Setting up real-time listener for child data: \(childId)")
+        
+        childDataListener = db.collection("children")
+            .document(childId.uuidString)
+            .addSnapshotListener { [weak self] snapshot, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("❌ Error listening for child data changes: \(error)")
+                        return
+                    }
+                    
+                    guard let document = snapshot, document.exists,
+                          let data = document.data() else {
+                        print("⚠️ Child document doesn't exist or has no data")
+                        return
+                    }
+                    
+                    print("🔄 Child data updated in Firestore - updating currentChild")
+                    print("📊 New data: points=\(data["points"] ?? "nil"), totalPointsEarned=\(data["totalPointsEarned"] ?? "nil")")
+                    
+                    // Update currentChild if it matches
+                    if self?.currentChild?.id == childId {
+                        let newPoints = data["points"] as? Int ?? self?.currentChild?.points ?? 0
+                        let newTotalPointsEarned = data["totalPointsEarned"] as? Int ?? self?.currentChild?.totalPointsEarned ?? 0
+                        
+                        self?.currentChild?.points = newPoints
+                        self?.currentChild?.totalPointsEarned = newTotalPointsEarned
+                        
+                        print("✅ Updated currentChild points: \(newPoints), totalPointsEarned: \(newTotalPointsEarned)")
+                    }
+                }
+            }
     }
 } 

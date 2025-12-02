@@ -222,39 +222,63 @@ struct PhotoApprovalDetailView: View {
                 feedback: feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : feedbackText
             )
             
-            await MainActor.run {
-                isProcessing = false
-                
-                if success {
-                    // Award points to child and update chore
-                    if let chore = chore {
-                        // Award points (saves to Firestore automatically)
-                        authService.awardPointsToChild(childId: photo.childId, points: chore.points)
-                        
-                        // Update chore status
-                        var updatedChore = chore
-                        updatedChore.isCompleted = true
-                        updatedChore.photoProofStatus = .approved
-                        updatedChore.parentFeedback = feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : feedbackText
-                        choreService.updateChore(updatedChore)
-                        
-                        print("✅ Awarded \(chore.points) points to child \(photo.childId)")
-                        
-                        // Send notification to child
-                        Task {
-                            let notificationService = NotificationService()
-                            await notificationService.createNotification(
-                                userId: photo.childId,
-                                type: .photoApproved,
-                                title: "Photo Approved! 🎉",
-                                message: "Great job! You earned \(chore.points) points for \"\(chore.title)\"",
-                                choreId: chore.id
-                            )
+            if success {
+                // Award points to child and update chore
+                if let chore = chore {
+                    print("📸 Starting approval process for chore: \(chore.title), child: \(photo.childId)")
+                    
+                    // Award points (saves to Firestore automatically)
+                    print("💰 Awarding \(chore.points) points to child \(photo.childId)")
+                    authService.awardPointsToChild(childId: photo.childId, points: chore.points)
+                    
+                    // Update chore status - await the Firestore update to ensure it's saved
+                    var updatedChore = chore
+                    updatedChore.isCompleted = true
+                    updatedChore.photoProofStatus = .approved
+                    updatedChore.parentFeedback = feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : feedbackText
+                    
+                    print("📝 Updating chore in Firestore:")
+                    print("   - Title: \(updatedChore.title)")
+                    print("   - isCompleted: \(updatedChore.isCompleted)")
+                    print("   - photoProofStatus: \(updatedChore.photoProofStatus?.rawValue ?? "nil")")
+                    print("   - assignedToChildId: \(updatedChore.assignedToChildId?.uuidString ?? "nil")")
+                    
+                    // Await the Firestore update to ensure it's persisted
+                    await choreService.updateChoreInFirestore(updatedChore)
+                    
+                    // Also update local array
+                    await MainActor.run {
+                        if let index = choreService.chores.firstIndex(where: { $0.id == chore.id }) {
+                            choreService.chores[index] = updatedChore
+                            print("✅ Updated local chore array at index \(index)")
+                        } else {
+                            print("⚠️ Could not find chore in local array to update")
                         }
                     }
                     
+                    print("✅ Approval complete: Awarded \(chore.points) points to child \(photo.childId)")
+                    print("✅ Chore updated in Firestore: \(chore.title) - isCompleted: true, photoProofStatus: approved")
+                    
+                    // Send notification to child
+                    Task {
+                        let notificationService = NotificationService()
+                        await notificationService.createNotification(
+                            userId: photo.childId,
+                            type: .photoApproved,
+                            title: "Photo Approved! 🎉",
+                            message: "Great job! You earned \(chore.points) points for \"\(chore.title)\"",
+                            choreId: chore.id
+                        )
+                    }
+                }
+                
+                await MainActor.run {
+                    isProcessing = false
                     onDismiss()
-                } else {
+                }
+            } else {
+                await MainActor.run {
+                    isProcessing = false
                     errorMessage = "Failed to approve photo. Please try again."
                     showError = true
                 }

@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import Firebase
+import FirebaseAuth
 import FirebaseFirestore
 
 class RewardService: ObservableObject {
@@ -10,21 +11,36 @@ class RewardService: ObservableObject {
     
     private let db = Firestore.firestore()
     
+    private var storedParentId: String?
+    
     init() {
         // Don't load data immediately - wait for authentication
         // Data will be loaded when user signs in
         
-        // Listen for authentication events
+        // Listen for authentication events (both parent and child)
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(loadDataOnAuthentication),
+            selector: #selector(loadDataOnAuthentication(_:)),
             name: .userAuthenticated,
             object: nil
         )
     }
     
-    @objc private func loadDataOnAuthentication() {
-        loadRewardsFromFirestore()
+    @objc private func loadDataOnAuthentication(_ notification: Notification) {
+        // Get parentId from notification userInfo if available (for child logins)
+        if let parentIdString = notification.userInfo?["parentId"] as? String {
+            storedParentId = parentIdString
+            loadRewardsFromFirestore(forParentId: parentIdString)
+        } else {
+            // Parent login (has Firebase Auth) or no parentId in notification
+            loadRewardsFromFirestore()
+        }
+    }
+    
+    // Method to load rewards for a specific parent ID (used when child logs in)
+    func loadRewardsForParent(parentId: String) {
+        storedParentId = parentId
+        loadRewardsFromFirestore(forParentId: parentId)
     }
     
     private func loadSampleData() {
@@ -34,10 +50,21 @@ class RewardService: ObservableObject {
     // MARK: - CRUD Operations
     
     func addReward(_ reward: Reward) {
-        rewards.append(reward)
-        // Save to Firestore
+        // Get current user's parent ID from Firebase Auth
+        guard let currentUser = Auth.auth().currentUser else {
+            print("❌ No authenticated user found when adding reward")
+            return
+        }
+        
+        // Create a copy of the reward with parentId set (store Firebase Auth UID as string for parentId)
+        var rewardWithParent = reward
+        // For now, store the parentId as a UUID placeholder - it will be saved as Firebase Auth UID string in Firestore
+        rewardWithParent.parentId = UUID()
+        
+        rewards.append(rewardWithParent)
+        // Save to Firestore (will save parentId as Firebase Auth UID string)
         Task {
-            await updateRewardInFirestore(reward)
+            await updateRewardInFirestore(rewardWithParent)
         }
     }
     
@@ -165,15 +192,50 @@ class RewardService: ObservableObject {
     
     // MARK: - Firestore Operations
     
-    private func loadRewardsFromFirestore() {
+    private func loadRewardsFromFirestore(forParentId: String? = nil) {
         Task {
-            await loadRewardsFromFirestoreAsync()
+            await loadRewardsFromFirestoreAsync(forParentId: forParentId)
         }
     }
     
-    private func loadRewardsFromFirestoreAsync() async {
+    private func loadRewardsFromFirestoreAsync(forParentId: String? = nil) async {
         do {
-            let snapshot = try await db.collection("rewards").getDocuments()
+            // Get parent ID - either from parameter, Firebase Auth (parent), or stored parentId (child)
+            var parentIdToQuery: String?
+            
+            if let forParentId = forParentId {
+                // Explicit parent ID provided (from child login)
+                parentIdToQuery = forParentId
+                print("📋 Loading rewards for specified parent: \(parentIdToQuery ?? "nil")")
+            } else if let currentUser = Auth.auth().currentUser {
+                // Parent is logged in via Firebase Auth
+                parentIdToQuery = currentUser.uid
+                print("📋 Loading rewards for parent (Firebase Auth): \(parentIdToQuery ?? "nil")")
+            } else if let storedParentId = storedParentId {
+                // Use stored parent ID (from previous child login)
+                parentIdToQuery = storedParentId
+                print("📋 Loading rewards for stored parent ID: \(parentIdToQuery ?? "nil")")
+            } else {
+                print("❌ Could not determine parent ID for reward loading")
+                DispatchQueue.main.async {
+                    self.rewards = []
+                }
+                return
+            }
+            
+            guard let parentId = parentIdToQuery else {
+                print("❌ No parent ID found for reward loading")
+                DispatchQueue.main.async {
+                    self.rewards = []
+                }
+                return
+            }
+            
+            // Filter rewards by parentId (using Firebase Auth UID string)
+            let snapshot = try await db.collection("rewards")
+                .whereField("parentId", isEqualTo: parentId)
+                .getDocuments()
+            
             var loadedRewards: [Reward] = []
             
             for document in snapshot.documents {
@@ -208,31 +270,44 @@ class RewardService: ObservableObject {
                     reward.purchasedByChildId = purchasedByChildId
                 }
                 
+                // Load parentId if it exists (parentId is stored as Firebase Auth UID string)
+                // We'll use it for filtering, but don't need to convert to UUID since we filter by string
+                if let _ = data["parentId"] as? String {
+                    // ParentId exists in Firestore (as Firebase Auth UID string)
+                    // We'll use it for filtering in the query above
+                }
+                
                 reward.createdAt = createdAtTimestamp.dateValue()
                 loadedRewards.append(reward)
             }
             
             DispatchQueue.main.async {
-                self.rewards = loadedRewards.isEmpty ? Reward.sampleRewards : loadedRewards
-                print("✅ Loaded \(loadedRewards.count) rewards from Firestore")
+                self.rewards = loadedRewards
+                print("✅ Loaded \(loadedRewards.count) rewards from Firestore for parent \(parentId)")
             }
             
         } catch {
             print("❌ Error loading rewards from Firestore: \(error)")
             DispatchQueue.main.async {
-                self.rewards = Reward.sampleRewards
+                self.rewards = []
             }
         }
     }
     
     private func updateRewardInFirestore(_ reward: Reward) async {
         do {
+            guard let currentUser = Auth.auth().currentUser else {
+                print("❌ No authenticated user found for reward update")
+                return
+            }
+            
             var rewardData: [String: Any] = [
                 "name": reward.name,
                 "description": reward.description,
                 "points": reward.points,
                 "category": reward.category.rawValue,
                 "isAvailable": reward.isAvailable,
+                "parentId": currentUser.uid, // Always set parentId to current user
                 "createdAt": Timestamp(date: reward.createdAt),
                 "updatedAt": FieldValue.serverTimestamp()
             ]
@@ -246,7 +321,7 @@ class RewardService: ObservableObject {
             }
             
             try await db.collection("rewards").document(reward.id.uuidString).setData(rewardData, merge: true)
-            print("✅ Reward updated in Firestore: \(reward.name)")
+            print("✅ Reward updated in Firestore: \(reward.name) for parent \(currentUser.uid)")
             
         } catch {
             print("❌ Error updating reward in Firestore: \(error)")
